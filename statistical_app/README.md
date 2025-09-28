@@ -26,7 +26,7 @@ A comprehensive tool for statistical analysis that provides intelligent test sel
 - **Multiple group comparisons**: ANOVA, Kruskal-Wallis, Friedman test
 - **Categorical data**: Chi-squared, Fisher's exact, McNemar's test
 - **Relationships**: Pearson/Spearman correlation, regression
-- **Advanced tests**: MANOVA, ANCOVA (planned)
+- **Advanced tests**: MANOVA, ANCOVA, Logistic Regression, Multiple Linear Regression
 
 ### 📈 Interactive Visualizations
 - Appropriate plots for each test type
@@ -45,6 +45,25 @@ A comprehensive tool for statistical analysis that provides intelligent test sel
 - Effect size calculations and interpretations
 - Practical significance assessment
 - Recommendations for follow-up analyses
+
+### ⚡ Power Analysis & Sample Size Calculation
+- Calculate required sample sizes for desired statistical power
+- Determine statistical power for existing studies
+- Interactive power curves and comprehensive analysis
+- Support for multiple test types (t-test, ANOVA, correlation, chi-square)
+
+### 📊 Advanced Post-Hoc Testing
+- Comprehensive multiple comparison procedures
+- Tukey's HSD, Bonferroni, Holm-Šídák, Benjamini-Hochberg
+- Dunn's test for non-parametric follow-ups
+- Games-Howell for unequal variances
+- Automatic method recommendations
+
+### 📝 Professional Report Generation
+- Multiple report formats (Basic, Comprehensive, Publication)
+- Export to HTML, Markdown, and text formats
+- APA-style statistical reporting
+- Downloadable analysis reports
 
 ## Installation
 
@@ -94,8 +113,10 @@ A comprehensive tool for statistical analysis that provides intelligent test sel
 1. **Home Page**: Overview of application capabilities and quick start guide
 2. **Test Selection Wizard**: Answer guided questions to get test recommendations
 3. **Data Upload & Analysis**: Upload your data or use sample datasets
-4. **Educational Content**: Learn about statistical concepts and best practices
-5. **Test Library**: Reference guide for all available tests
+4. **Advanced Analysis**: Access MANOVA, ANCOVA, and regression methods
+5. **Power Analysis**: Calculate sample sizes and statistical power
+6. **Educational Content**: Learn about statistical concepts and best practices
+7. **Test Library**: Reference guide for all available tests
 
 ### Workflow Example
 
@@ -143,7 +164,21 @@ The application includes several built-in datasets for demonstration:
 - Pearson correlation
 - Spearman rank correlation
 - Linear regression
-- Logistic regression (planned)
+- Multiple linear regression
+- Logistic regression
+
+### Advanced Multivariate Tests
+- MANOVA (Multivariate ANOVA)
+- ANCOVA (Analysis of Covariance)
+- Two-way ANOVA
+
+### Post-Hoc Tests
+- Tukey's HSD
+- Bonferroni correction
+- Holm-Šídák method
+- Benjamini-Hochberg FDR
+- Dunn's test
+- Games-Howell test
 
 ## Educational Features
 
