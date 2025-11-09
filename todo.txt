@@ -1,0 +1,578 @@
+Oto ultra-dokładny, 12-krokowy plan implementacji dla agenta (programisty), który ma zintegrować moduł "Automatycznego Rekomendowania i Wykonywania Testów" z istniejącą aplikacją Streamlit.
+
+-----
+
+## 🚀 Plan Implementacji: Moduł Rekomendacji i Analizy Statystycznej
+
+### Krok 1: Stworzenie Pliku Modułu i Integracja z Główną Aplikacją
+
+**Cel:** Stworzenie dedykowanego pliku Python dla nowej funkcjonalności i podłączenie go do głównej nawigacji aplikacji. Zapewnia to modularność i czystość kodu.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  W głównym folderze projektu stwórz nowy plik: `statistical_recommender.py`.
+2.  W tym pliku zdefiniuj główną funkcję, która będzie zawierać całą logikę tego modułu, np. `def run_recommender_tool():`.
+3.  Upewnij się, że na początku `statistical_recommender.py` importujesz wszystkie niezbędne biblioteki:
+    ```python
+    import streamlit as st
+    import pandas as pd
+    import scipy.stats as stats
+    from statsmodels.stats.anova import anova_lm # Dla ANOVA
+    from statsmodels.formula.api import ols # Dla ANOVA
+    import numpy as np
+    import openpyxl # Wymagane przez pandas do .xlsx
+    ```
+4.  W głównym pliku aplikacji (np. `app.py`):
+      * Zaimportuj nowy moduł: `import statistical_recommender`.
+      * Znajdź logikę nawigacji (prawdopodobnie `st.sidebar.selectbox` lub podobny).
+      * Dodaj nową opcję do wyboru, np. "Rekomender Testów Statystycznych".
+      * W bloku `if/elif` wywołaj funkcję z nowego modułu:
+        ```python
+        # W app.py
+        app_choice = st.sidebar.selectbox("Wybierz narzędzie", ["Strona Główna", "Rekomender Testów Statystycznych", "Inne..."])
+
+        if app_choice == "Strona Główna":
+            # ...
+        elif app_choice == "Rekomender Testów Statystycznych":
+            statistical_recommender.run_recommender_tool()
+        ```
+
+-----
+
+### Krok 2: Interfejs Użytkownika (UI) do Wgrywania Danych i Opcji Parsowania
+
+**Cel:** Umożliwienie użytkownikowi wgrania pliku (`.csv`, `.tsv`, `.xlsx`) i natychmiastowe zdefiniowanie kluczowych opcji formatowania (np. separatora), aby zapobiec błędom wczytywania.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  W funkcji `run_recommender_tool()` dodaj tytuł i uploader plików:
+    ```python
+    st.title("🤖 Automatyczny Rekomender Testów Statystycznych")
+    uploaded_file = st.file_uploader("Krok 1: Wgraj swój plik z danymi", type=["csv", "tsv", "xlsx"], on_change=clear_session_state_on_new_file)
+    ```
+      * **Ważne:** Użycie `on_change` jest kluczowe. Wskaż mu funkcję (którą zdefiniujesz w Kroku 12), która wyczyści cały `st.session_state`, gdy użytkownik wgra *nowy* plik.
+2.  Dodaj ekspander (`st.expander`) na opcje formatowania. Pojawi się on *tylko*, gdy plik jest wgrany.
+    ```python
+    if uploaded_file is not None:
+        with st.expander("Opcje ładowania danych"):
+            # Opcje specyficzne dla CSV/TSV
+            if uploaded_file.name.endswith(('.csv', '.tsv')):
+                delimiter = st.radio("Wybierz separator (delimiter):", (',', ';', '\t', ' '), horizontal=True, key='file_delimiter')
+            # Opcje specyficzne dla Excela
+            elif uploaded_file.name.endswith('.xlsx'):
+                sheet_name = st.text_input("Podaj nazwę arkusza (zostaw puste dla pierwszego)", key='file_sheet')
+    ```
+      * Używaj unikalnych kluczy (`key=...`), aby Streamlit poprawnie zarządzał stanem tych widgetów.
+
+-----
+
+### Krok 3: Logika Ładowania Danych i Cache'owania (Backend)
+
+**Cel:** Stworzenie funkcji, która bezpiecznie wczyta dane do DataFrame Pandas, obsługując różne formaty i opcje. Funkcja *musi* być cache'owana, aby uniknąć ponownego ładowania pliku przy każdej interakcji użytkownika.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Zdefiniuj funkcję ładującą z dekoratorem `@st.cache_data`. Ten dekorator jest niezbędny dla wydajności.
+2.  Funkcja musi przyjmować obiekt pliku oraz opcje parsowania jako argumenty, aby cache poprawnie się resetował, gdy zmienią się opcje.
+    ```python
+    @st.cache_data
+    def load_data(file, delimiter=None, sheet_name=None):
+        try:
+            if file.name.endswith(('.csv', '.tsv')):
+                # Użyj domyślnego separatora, jeśli nie został podany
+                sep = delimiter if delimiter else ','
+                df = pd.read_csv(file, sep=sep)
+            elif file.name.endswith('.xlsx'):
+                # Użyj None (co oznacza pierwszy arkusz) lub podanej nazwy
+                sn = sheet_name if sheet_name else 0 
+                df = pd.read_excel(file, sheet_name=sn)
+            return df
+        except Exception as e:
+            st.error(f"Błąd podczas ładowania pliku: {e}")
+            return None
+    ```
+3.  Wywołaj tę funkcję w głównym przepływie, przekazując opcje z `st.session_state` (Streamlit automatycznie przechowa tam wartości z widgetów dzięki użytym `key`):
+    ```python
+    if uploaded_file is not None:
+        # ... (kod expandera z Kroku 2) ...
+        
+        # Pobierz opcje ze stanu lub użyj domyślnych
+        delimiter_opt = st.session_state.get('file_delimiter', ',')
+        sheet_opt = st.session_state.get('file_sheet', None)
+
+        df = load_data(uploaded_file, delimiter_opt, sheet_opt)
+    ```
+
+-----
+
+### Krok 4: Zarządzanie Stanem Sesji i Wyświetlanie Podglądu Danych
+
+**Cel:** Zapisanie wczytanego DataFrame w `st.session_state`, aby był dostępny dla wszystkich kolejnych kroków (wybór kolumn, analiza) bez potrzeby ponownego ładowania. Użycie `st.session_state` jest fundamentem wieloetapowych aplikacji w Streamlit.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Gdy `df` zostanie pomyślnie załadowany (nie jest `None`), natychmiast zapisz go w stanie sesji i pokaż podgląd.
+    ```python
+    if df is not None:
+        st.session_state['data'] = df # KLUCZOWY KROK
+        st.header("Podgląd Danych (pierwsze 5 wierszy)")
+        st.dataframe(df.head())
+    ```
+2.  Cała reszta logiki modułu (Kroki 5-11) musi być teraz umieszczona wewnątrz bloku `if 'data' in st.session_state:`. Gwarantuje to, że interfejs do analizy pojawi się *dopiero* po pomyślnym załadowaniu danych.
+    ```python
+    # ... (kod do ładowania danych) ...
+
+    # Główny blok przepływu analizy
+    if 'data' in st.session_state:
+        df = st.session_state['data'] # Pobierz df ze stanu
+        
+        # ... (Tutaj umieścisz Kroki 5, 6, 7, 8, 9, 10, 11) ...
+    ```
+
+-----
+
+### Krok 5: Interfejs Użytkownika (UI) do Wyboru Kolumn
+
+**Cel:** Umożliwienie użytkownikowi wybrania (jednej lub więcej) kolumn z wczytanych danych, które chce poddać analizie.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Wewnątrz bloku `if 'data' in st.session_state:` dodaj `st.multiselect`.
+2.  Zapisz wybór użytkownika również w `st.session_state`. Użyj `on_change`, aby wyczyścić *stare wyniki analizy* (ale nie wczytane dane\!), gdy użytkownik zmieni kolumny.
+    ```python
+    st.header("Krok 2: Wybierz kolumny do analizy")
+    st.info("Wybierz kolumny, które chcesz porównać. Rekomendacja będzie zależeć od ich typów i liczby.")
+
+    all_columns = df.columns.tolist()
+    selected_columns = st.multiselect(
+        "Wybierz kolumny:",
+        all_columns,
+        key='selected_columns',
+        on_change=clear_analysis_results # Funkcja do zdefiniowania w Kroku 12
+    )
+    ```
+      * Funkcja `clear_analysis_results` powinna usuwać klucze takie jak `'profile'`, `'assumptions'`, `'recommendation'`, `'results'`.
+
+-----
+
+### Krok 6: Profilowanie Kolumn i Sprawdzanie Założeń (Backend)
+
+**Cel:** Automatyczne uruchomienie logiki, która analizuje wybrane kolumny. Sprawdza ich typ (numeryczny/kategoryczny) oraz kluczowe założenia, jak normalność rozkładu (dla zmiennych numerycznych).
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Stwórz funkcję `def profile_and_test_columns(df, cols):`.
+2.  Ta funkcja powinna iterować po `cols` i budować słownik "profilu".
+3.  **Wykrywanie Typu:** Użyj `pd.api.types.is_numeric_dtype(df[col])` do rozróżnienia.
+4.  **Heurystyka Kategoryczna:** Jeśli kolumna nie jest numeryczna, sprawdź `df[col].nunique()`. Jeśli ma \>50 unikalnych wartości (lub inny próg), traktuj ją jako "Tekst/ID"; jeśli mniej, traktuj jako "Kategoryczna".
+5.  **Test Normalności:** Dla każdej kolumny numerycznej, uruchom test Shapiro-Wilka. Użyj `stats.shapiro(df[col].dropna())`. Zapisz p-wartość. Obsłuż błędy (np. gdy jest za mało danych).
+6.  **Test Homogeniczności Wariancji:** Jeśli wybrano DOKŁADNIE 1 kolumnę kategoryczną i 1 numeryczną, uruchom test Levene'a. Musisz przygotować dane: `groups_data = [df[num_col][df[cat_col] == g].dropna() for g in df[cat_col].unique()]`. Następnie `stats.levene(*groups_data)`. Zapisz p-wartość.
+7.  Funkcja powinna zwracać dwa słowniki: `profile` (informacje o każdej kolumnie) i `assumptions` (wyniki testów interakcji, jak Levene'a).
+    ```python
+    # Przykładowa struktura zwracana przez funkcję:
+    profile = {
+        'Wiek': {'type': 'Numeric', 'is_normal': False, 'p_shapiro': 0.001},
+        'Grupa': {'type': 'Categorical', 'unique_values': 3}
+    }
+    assumptions = {
+        'homoscedasticity': True, 'p_levene': 0.15
+    }
+    ```
+8.  Wywołaj tę funkcję, gdy tylko użytkownik wybierze kolumny, i zapisz wyniki w stanie:
+    ```python
+    if len(st.session_state.get('selected_columns', [])) > 0:
+        cols = st.session_state['selected_columns']
+        profile, assumptions = profile_and_test_columns(df, cols)
+        st.session_state['profile'] = profile
+        st.session_state['assumptions'] = assumptions
+    ```
+
+-----
+
+### Krok 7: Wyświetlanie Założeń i Logika Rekomendacji (UI + Backend)
+
+**Cel:** Wyświetlenie użytkownikowi wyników analizy założeń (Krok 6) i uruchomienie "silnika rekomendacji" (drzewa decyzyjnego), aby wybrać odpowiedni test.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  **Wyświetlanie Założeń (UI):** Jeśli `'profile'` istnieje w stanie, wyświetl go.
+    ```python
+    if 'profile' in st.session_state:
+        st.header("Krok 3: Automatyczna Analiza Założeń")
+        with st.expander("Zobacz szczegóły analizy kolumn", expanded=False):
+            st.json(st.session_state['profile'])
+        if 'assumptions' in st.session_state:
+            st.json(st.session_state['assumptions'])
+    ```
+2.  **Silnik Rekomendacji (Backend):** Stwórz funkcję `def get_recommendation(profile, assumptions, selected_cols):`.
+      * Najpierw policz: `num_numeric = len([p for p in profile.values() if p['type'] == 'Numeric'])` i `num_categorical`.
+      * Zbuduj drzewo decyzyjne `if/elif`:
+        ```python
+        # Wewnątrz get_recommendation()
+        if num_numeric == 1 and num_categorical == 1:
+            cat_col_name = ...
+            num_groups = profile[cat_col_name]['unique_values']
+            is_normal = list(profile.values())...['is_normal']
+            is_homoscedastic = assumptions.get('homoscedasticity', False)
+
+            if num_groups == 2:
+                if is_normal and is_homoscedastic:
+                    return {'name': 'Test t dla prób niezależnych', 'key': 'ttest_ind', ...}
+                elif is_normal and not is_homoscedastic:
+                    return {'name': 'Test t Welcha', 'key': 'ttest_welch', ...}
+                else:
+                    return {'name': 'Test U Manna-Whitneya', 'key': 'mannwhitneyu', ...}
+            elif num_groups > 2:
+                if is_normal and is_homoscedastic:
+                    return {'name': 'Jednoczynnikowa ANOVA', 'key': 'anova', ...}
+                else: # Uproszczenie: dla braku normalności lub równości wariancji
+                    return {'name': 'Test Kruskala-Wallisa', 'key': 'kruskal', ...}
+
+        elif num_numeric == 2 and num_categorical == 0:
+            # ... logika dla korelacji (Pearson/Spearman) ...
+            return {'name': 'Korelacja Pearsona', 'key': 'pearsonr', ...}
+
+        elif num_numeric == 0 and num_categorical == 2:
+            return {'name': 'Test Chi-kwadrat', 'key': 'chi2', ...}
+
+        else:
+            return {'name': 'Brak testu', 'key': None, 'reason': 'Wybierz inną kombinację...'}
+        ```
+      * **Kluczowe:** Słownik rekomendacji *musi* zawierać unikalny klucz (`'key'`) identyfikujący funkcję testującą do uruchomienia.
+3.  Wywołaj silnik i zapisz wynik w stanie:
+    ```python
+    if 'profile' in st.session_state:
+        # ... (kod wyświetlania profilu) ...
+        rec = get_recommendation(st.session_state['profile'], st.session_state['assumptions'], st.session_state['selected_columns'])
+        st.session_state['recommendation'] = rec
+        
+        st.header("Krok 4: Rekomendacja Testu")
+        st.success(f"**Sugerowany test:** {rec['name']}")
+        st.info(f"**Uzasadnienie:** {rec['reason']}")
+    ```
+
+-----
+
+### Krok 8: Przycisk Wykonania Analizy (UI)
+
+**Cel:** Udostępnienie przycisku, który pozwala użytkownikowi *zaakceptować* rekomendację i uruchomić pełną analizę.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Ten przycisk powinien pojawić się tylko wtedy, gdy istnieje ważna rekomendacja (klucz nie jest `None`).
+2.  Kliknięcie przycisku powinno jedynie ustawić flagę w `st.session_state`. Właściwa analiza zostanie uruchomiona w Kroku 9.
+    ```python
+    if 'recommendation' in st.session_state and st.session_state['recommendation']['key'] is not None:
+        rec_name = st.session_state['recommendation']['name']
+        if st.button(f"✅ Tak, wykonaj analizę ({rec_name})", type="primary"):
+            st.session_state['run_analysis_flag'] = True
+    ```
+
+-----
+
+### Krok 9: Router Funkcji Statystycznych (Backend)
+
+**Cel:** Stworzenie "routera", który na podstawie flagi z Kroku 8 i klucza z rekomendacji (`'key'`) wywoła odpowiednią funkcję statystyczną (zdefiniowaną w Kroku 10).
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Umieść tę logikę na samym końcu głównego bloku `if 'data' in st.session_state:`.
+2.  Sprawdź, czy flaga `run_analysis_flag` jest ustawiona na `True`.
+3.  Jeśli tak, pobierz klucz testu, wywołaj główny router, zapisz wyniki w stanie, a następnie *natychmiast zresetuj flagę* (aby test nie uruchamiał się w kółko).
+    ```python
+    if st.session_state.get('run_analysis_flag', False):
+        df = st.session_state['data']
+        cols = st.session_state['selected_columns']
+        rec_key = st.session_state['recommendation']['key']
+        
+        with st.spinner("Przeprowadzanie analizy statystycznej..."):
+            # Wywołaj router, który wywoła właściwy test
+            results = run_statistical_test(df, cols, rec_key)
+            st.session_state['results'] = results
+        
+        st.session_state['run_analysis_flag'] = False # Resetuj flagę!
+    ```
+4.  Zdefiniuj funkcję routera `run_statistical_test(df, cols, key)`:
+    ```python
+    def run_statistical_test(df, cols, key):
+        if key == 'ttest_ind':
+            return run_ttest_ind(df, cols) # Funkcja z Kroku 10
+        elif key == 'anova':
+            return run_anova(df, cols) # Funkcja z Kroku 10
+        elif key == 'chi2':
+            return run_chi2(df, cols) # Funkcja z Kroku 10
+        # ... (itd. dla każdego testu)
+        else:
+            return {'error': 'Nie znaleziono funkcji testującej'}
+    ```
+
+-----
+
+### Krok 10: Implementacja Poszczególnych Funkcji Testujących (Backend)
+
+**Cel:** Stworzenie oddzielnych funkcji dla *każdego* testu statystycznego. Każda funkcja musi zwracać *ustandaryzowany słownik wyników*.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Zdefiniuj funkcję dla każdego klucza z Kroku 7 (np. `run_ttest_ind`, `run_anova`, `run_chi2`).
+2.  Każda funkcja musi:
+    a. Wyodrębnić odpowiednie kolumny (np. znaleźć, która jest numeryczna, a która kategoryczna).
+    b. Przygotować dane (np. stworzyć grupy dla testu t).
+    c. Uruchomić test za pomocą `scipy.stats` lub `statsmodels`.
+    d. Sformatować hipotezy (H0, H1) jako stringi.
+    e. Zinterpretować p-wartość (Poniżej / Powyżej 0.05).
+    f. Zwrócić słownik o *tej samej strukturze*.
+3.  **Przykład (Test t):**
+    ```python
+    def run_ttest_ind(df, cols):
+        # Logika do znalezienia, która kolumna jest num_col, a która cat_col
+        num_col = ... 
+        cat_col = ...
+        
+        groups = df[cat_col].unique()
+        data1 = df[df[cat_col] == groups[0]][num_col].dropna()
+        data2 = df[df[cat_col] == groups[1]][num_col].dropna()
+        
+        stat, p_value = stats.ttest_ind(data1, data2)
+        
+        h0 = f"Średnia wartość '{num_col}' jest taka sama dla grupy '{groups[0]}' i '{groups[1]}'."
+        h1 = f"Średnia wartość '{num_col}' różni się istotnie między grupami."
+        
+        alpha = 0.05
+        if p_value < alpha:
+            interpretation = f"Ponieważ p-wartość ({p_value:.4f}) jest mniejsza niż {alpha}, odrzucamy hipotezę zerową (H0)."
+            conclusion = "Stwierdzono statystycznie istotną różnicę między grupami."
+        else:
+            interpretation = f"Ponieważ p-wartość ({p_value:.4f}) jest większa niż {alpha}, brak podstaw do odrzucenia hipotezy zerowej (H0)."
+            conclusion = "Nie stwierdzono statystycznie istotnej różnicy między grupami."
+            
+        return {
+            'test_name': 'Test t dla prób niezależnych',
+            'statistic_name': 't-statistic',
+            'statistic_value': stat,
+            'p_value': p_value,
+            'h0': h0,
+            'h1': h1,
+            'interpretation': interpretation,
+            'conclusion': conclusion
+        }
+    ```
+4.  **Przykład (ANOVA):** Będziesz potrzebować `statsmodels`.
+    ```python
+    def run_anova(df, cols):
+        # num_col = ..., cat_col = ...
+        model = ols(f'Q("{num_col}") ~ C(Q("{cat_col}"))', data=df).fit()
+        anova_table = anova_lm(model, typ=2)
+        
+        p_value = anova_table['PR(>F)'][0]
+        f_value = anova_table['F'][0]
+        # ... (reszta logiki formatowania H0, H1, interpretacji) ...
+        
+        return {
+            'test_name': 'Jednoczynnikowa ANOVA',
+            'statistic_name': 'F-statistic',
+            'statistic_value': f_value,
+            'p_value': p_value,
+            # ... (h0, h1, interpretation, conclusion) ...
+        }
+    ```
+
+-----
+
+### Krok 11: Wyświetlanie Końcowego Raportu z Wynikami (UI)
+
+**Cel:** Zaprezentowanie użytkownikowi pełnego raportu z analizy w czytelny i uporządkowany sposób.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Na samym dole, wewnątrz `if 'data' in st.session_state:`, dodaj blok sprawdzający, czy istnieją wyniki.
+2.  Użyj `st.header`, `st.subheader`, `st.metric` i `st.info`/`st.success`, aby sformatować ustandaryzowany słownik wyników.
+    ```python
+    if 'results' in st.session_state:
+        results = st.session_state['results']
+        
+        st.header(f"Krok 5: Wyniki Analizy ({results['test_name']})")
+        st.markdown("---")
+        
+        st.subheader("Sformułowane Hipotezy")
+        st.markdown(f"**Hipoteza Zerowa (H0):** {results['h0']}")
+        st.markdown(f"**Hipoteza Alternatywna (H1):** {results['h1']}")
+        
+        st.subheader("Wyniki Testu")
+        col1, col2 = st.columns(2)
+        col1.metric(results['statistic_name'], f"{results['statistic_value']:.4f}")
+        col2.metric("P-wartość (p-value)", f"{results['p_value']:.4f}")
+        
+        st.subheader("Interpretacja i Wnioski (dla poziomu istotności α = 0.05)")
+        st.info(f"**Interpretacja:** {results['interpretation']}")
+        st.success(f"**Wniosek:** {results['conclusion']}")
+    ```
+
+-----
+
+### Krok 12: Funkcje Czyszczące Stan Sesji (Backend)
+
+**Cel:** Zapewnienie, że stan aplikacji jest poprawnie resetowany, gdy użytkownik zmienia dane wejściowe, aby uniknąć wyświetlania starych wyników dla nowych danych.
+
+**Szczegółowy Opis dla Agenta:**
+
+1.  Zdefiniuj dwie funkcje czyszczące. Najlepiej na górze pliku `statistical_recommender.py`.
+2.  **Funkcja 1: Resetowanie wszystkiego** (gdy wgrywany jest nowy plik).
+    ```python
+    def clear_session_state_on_new_file():
+        # Klucze do usunięcia
+        keys_to_clear = ['data', 'selected_columns', 'profile', 'assumptions', 'recommendation', 'results', 'run_analysis_flag']
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+    ```
+3.  **Funkcja 2: Resetowanie tylko analizy** (gdy zmieniane są kolumny).
+    ```python
+    def clear_analysis_results():
+        # Klucze do usunięcia (zostawiamy 'data'!)
+        keys_to_clear = ['profile', 'assumptions', 'recommendation', 'results', 'run_analysis_flag']
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+    ```
+4.  Upewnij się, że te funkcje są poprawnie podłączone do parametrów `on_change` w widgetach (jak opisano w Kroku 2 i 5).
+
+
+
+### Krok 13. Demo data
+
+Dodatkowo wygeneruj demo data które byłyby odpowiednie dla każdego testu statustycznego 
+
+
+### Krok 14 Biblioteka Testów Statystycznych do Implementacji
+
+Oto docelowa lista testów, które silnik rekomendacji i analizy musi obsługiwać. Podzielono je według scenariuszy wyboru kolumn przez użytkownika.
+
+I. Testy Porównawcze (Porównywanie Średnich/Median)
+Te testy są używane, gdy użytkownik chce porównać wartości liczbowe między różnymi grupami.
+
+Scenariusz 1: 1 Zmienna Kategoryczna (2 grupy) + 1 Zmienna Numeryczna (Przykład: Porównanie 'Wzrostu' (Num) między 'Mężczyzna' i 'Kobieta' (Kat))
+
+Test 1: Test t dla prób niezależnych (Independent T-test)
+
+Kiedy: Gdy zmienna numeryczna ma rozkład normalny ORAZ wariancje w obu grupach są równe (test Levene'a > 0.05).
+
+Hipoteza (H0): Średnie w obu grupach są równe.
+
+Klucz implementacji: ttest_ind
+
+Biblioteka: scipy.stats.ttest_ind(data1, data2, equal_var=True)
+
+Test 2: Test t Welcha (Welch's T-test)
+
+Kiedy: Gdy zmienna numeryczna ma rozkład normalny, ALE wariancje w grupach są różne (test Levene'a <= 0.05).
+
+Hipoteza (H0): Średnie w obu grupach są równe.
+
+Klucz implementacji: ttest_welch
+
+Biblioteka: scipy.stats.ttest_ind(data1, data2, equal_var=False)
+
+Test 3: Test U Manna-Whitneya (Mann-Whitney U Test)
+
+Kiedy: Gdy zmienna numeryczna NIE ma rozkładu normalnego (test Shapiro-Wilka <= 0.05). Jest to test nieparametryczny.
+
+Hipoteza (H0): Rozkłady (lub mediany) w obu grupach są takie same.
+
+Klucz implementacji: mannwhitneyu
+
+Biblioteka: scipy.stats.mannwhitneyu(data1, data2)
+
+Scenariusz 2: 1 Zmienna Kategoryczna (3+ grupy) + 1 Zmienna Numeryczna (Przykład: Porównanie 'Wyniku testu' (Num) między 'Grupa A', 'Grupa B' i 'Grupa C' (Kat))
+
+Test 4: Jednoczynnikowa Analiza Wariancji (One-Way ANOVA)
+
+Kiedy: Gdy zmienna numeryczna ma rozkład normalny ORAZ wariancje we wszystkich grupach są równe (test Levene'a > 0.05).
+
+Hipoteza (H0): Średnie we wszystkich grupach są równe.
+
+Klucz implementacji: anova
+
+Biblioteka: scipy.stats.f_oneway(grupa1, grupa2, grupa3, ...) LUB (lepiej) statsmodels dla pełnej tabeli.
+
+Test 5: Test Kruskala-Wallisa (Kruskal-Wallis H Test)
+
+Kiedy: Gdy zmienna numeryczna NIE ma rozkładu normalnego LUB wariancje NIE są równe. Jest to test nieparametryczny.
+
+Hipoteza (H0): Rozkłady (lub mediany) we wszystkich grupach są takie same.
+
+Klucz implementacji: kruskal
+
+Biblioteka: scipy.stats.kruskal(grupa1, grupa2, grupa3, ...)
+
+II. Testy Zależności (Sprawdzanie Relacji)
+Te testy są używane do sprawdzenia, czy dwie zmienne są ze sobą powiązane.
+
+Scenariusz 3: 2 Zmienne Numeryczne (Przykład: Sprawdzenie relacji między 'Wzrostem' a 'Wagą')
+
+Test 6: Współczynnik Korelacji r Pearsona
+
+Kiedy: Gdy OBIE zmienne numeryczne mają rozkład normalny.
+
+Hipoteza (H0): Nie ma liniowej korelacji między zmiennymi (współczynnik = 0).
+
+Klucz implementacji: pearsonr
+
+Biblioteka: scipy.stats.pearsonr(x, y) (zwraca współczynnik i p-wartość)
+
+Test 7: Współczynnik Korelacji rang Spearmana
+
+Kiedy: Gdy co najmniej jedna ze zmiennych NIE ma rozkładu normalnego. Jest to test nieparametryczny.
+
+Hipoteza (H0): Nie ma monotonicznej korelacji między zmiennymi.
+
+Klucz implementacji: spearmanr
+
+Biblioteka: scipy.stats.spearmanr(x, y) (zwraca współczynnik i p-wartość)
+
+Scenariusz 4: 2 Zmienne Kategoryczne (Przykład: Sprawdzenie relacji między 'Płcią' a 'Poziomem Wykształcenia')
+
+Test 8: Test Chi-kwadrat (χ²) Niezależności
+
+Kiedy: Zawsze dla dwóch zmiennych kategorycznych (choć wymaga pewnych założeń co do wielkości oczekiwanych w komórkach).
+
+Hipoteza (H0): Zmienne są od siebie niezależne (nie ma między nimi związku).
+
+Klucz implementacji: chi2
+
+Biblioteka: Wymaga stworzenia tabeli kontyngencji (pd.crosstab(kat1, kat2)), a następnie scipy.stats.chi2_contingency(tabela).
+
+Test 9: Dokładny test Fishera (Fisher's Exact Test)
+
+Kiedy: Gdy założenia do testu Chi-kwadrat nie są spełnione (np. w tabeli 2x2 są komórki z wartością oczekiwaną < 5). Jest to dobra alternatywa dla małych próbek.
+
+Hipoteza (H0): Zmienne są od siebie niezależne.
+
+Klucz implementacji: fisher_exact
+
+Biblioteka: scipy.stats.fisher_exact(tabela_2x2)
+
+III. Testy dla Danych Sparowanych (Rozszerzenie)
+Są to kluczowe testy, ale wymagają innej logiki wyboru (np. wybrania 2 kolumn numerycznych i zaznaczenia "są to dane sparowane").
+
+Scenariusz 5: 2 Zmienne Numeryczne (Sparowane) (Przykład: Porównanie 'Wynik PRZED' (Num 1) z 'Wynik PO' (Num 2))
+
+Test 10: Test t dla prób zależnych (Paired T-test)
+
+Kiedy: Gdy RÓŻNICE między parami mają rozkład normalny.
+
+Hipoteza (H0): Średnia różnica między parami wynosi zero.
+
+Klucz implementacji: ttest_rel
+
+Biblioteka: scipy.stats.ttest_rel(data_przed, data_po)
+
+Test 11: Test rang Wilcoxona (Wilcoxon Signed-Rank Test)
+
+Kiedy: Gdy RÓŻNICE między parami NIE mają rozkładu normalnego. Test nieparametryczny.
+
+Hipoteza (H0): Mediana różnic między parami wynosi zero.
+
+Klucz implementacji: wilcoxon
+
+Biblioteka: scipy.stats.wilcoxon(data_przed, data_po)
