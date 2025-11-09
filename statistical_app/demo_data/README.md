@@ -19,6 +19,9 @@ This directory contains synthetic demo datasets for various statistical tests.
 4. **demo_anova.csv** - One-way ANOVA
    - Columns: Wzrost_Roslin_cm (numeric), Rodzaj_Nawozu (categorical: 3 groups)
    - Use: Compare plant growth across three fertilizer types
+   - Note: Data are normal (p=0.082) but have unequal variances (Levene p=0.039)
+   - Demonstrates: ANOVA is robust to violations of homoscedasticity with balanced designs
+   - Recommendation: Use Games-Howell post-hoc test instead of Tukey HSD
 
 5. **demo_kruskal.csv** - Kruskal-Wallis test
    - Columns: Ocena_Zadowolenia (numeric, non-normal), Klinika (categorical: 4 groups)
@@ -47,6 +50,37 @@ This directory contains synthetic demo datasets for various statistical tests.
 11. **demo_wilcoxon.csv** - Wilcoxon signed-rank test
     - Columns: Poziom_Bolu_Przed (numeric, non-normal), Poziom_Bolu_Po (numeric)
     - Use: Compare pain levels before and after treatment (paired, non-normal)
+
+## Important Notes on Test Selection:
+
+### ANOVA with Unequal Variances
+The **demo_anova.csv** dataset is a real-world example where:
+- Data are normally distributed (Shapiro-Wilk p=0.082 > 0.05) ✓
+- Variances are NOT equal (Levene's test p=0.039 < 0.05) ✗
+
+**Why is ANOVA still recommended?**
+- ANOVA is **robust** to violations of homogeneity of variance
+- This robustness is especially strong when:
+  - Groups have equal or similar sample sizes (balanced design)
+  - The violation is not extreme (ratio of largest/smallest variance < 3:1)
+  - Data are normally distributed
+
+**What does this mean for you?**
+- ANOVA is the correct test for this data
+- However, use **Games-Howell post-hoc test** instead of Tukey HSD
+- Games-Howell does NOT assume equal variances
+- The system will recommend this in the rationale
+
+This demonstrates an important statistical principle: **normality is more important than homoscedasticity** for ANOVA.
+
+### Choosing Between Parametric and Non-Parametric Tests
+- **Normality is the key assumption** for most parametric tests
+- Shapiro-Wilk test (p > 0.05) indicates normal distribution
+- When normality is violated, use non-parametric alternatives:
+  - t-test → Mann-Whitney U test
+  - ANOVA → Kruskal-Wallis test
+  - Paired t-test → Wilcoxon signed-rank test
+  - Pearson correlation → Spearman correlation
 
 ## How to Use:
 
