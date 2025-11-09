@@ -25,6 +25,7 @@ from modules.advanced_tests import AdvancedStatisticalTests
 from modules.power_analysis import PowerAnalysis
 from modules.report_generator import ReportGenerator
 from modules.post_hoc_tests import PostHocTests
+import statistical_recommender
 
 # Configure Streamlit page
 st.set_page_config(
@@ -81,7 +82,8 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page:",
-        ["Home", "Test Selection Wizard", "Data Upload & Analysis", "Advanced Analysis",
+        ["Home", "Test Selection Wizard", "Data Upload & Analysis",
+         "Automatic Test Recommender", "Advanced Analysis",
          "Power Analysis", "Educational Content", "Test Library"]
     )
 
@@ -100,6 +102,8 @@ def main():
         show_test_selection_wizard()
     elif page == "Data Upload & Analysis":
         show_data_analysis_page()
+    elif page == "Automatic Test Recommender":
+        statistical_recommender.run_recommender_tool()
     elif page == "Advanced Analysis":
         show_advanced_analysis_page()
     elif page == "Power Analysis":
@@ -119,9 +123,19 @@ def show_home_page():
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
+        st.markdown("""
+        ### 🤖 Automatic Test Recommender (NEW!)
+        Upload your data and get:
+        - Automatic column profiling
+        - Assumption testing (normality, homoscedasticity)
+        - Intelligent test recommendations
+        - One-click test execution
+        - Detailed interpretation
+        """)
+
         st.markdown("""
         ### 🧭 Test Selection Wizard
         Get personalized test recommendations based on:
@@ -141,7 +155,6 @@ def show_home_page():
         - Get interpretation guidance
         """)
 
-    with col3:
         st.markdown("""
         ### 📚 Educational Content
         Learn about:
@@ -156,9 +169,10 @@ def show_home_page():
     ### Quick Start Guide
 
     1. **New to statistics?** Start with the **Educational Content** to learn the basics
-    2. **Have data ready?** Use the **Test Selection Wizard** to find the right test
-    3. **Know your test?** Go directly to **Data Upload & Analysis**
-    4. **Need reference?** Check the **Test Library** for detailed information
+    2. **Want automatic recommendations?** Try the **Automatic Test Recommender** - just upload your data!
+    3. **Have data ready?** Use the **Test Selection Wizard** to find the right test
+    4. **Know your test?** Go directly to **Data Upload & Analysis**
+    5. **Need reference?** Check the **Test Library** for detailed information
     """)
 
     # Sample datasets showcase
