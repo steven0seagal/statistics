@@ -411,6 +411,8 @@ The **Automatic Test Recommender** is the fastest way to analyze your data. Simp
 - Paired t-test (before/after, normal differences)
 - Wilcoxon signed-rank test (before/after, non-normal)
 
+> 📖 **For detailed documentation** of each test including assumptions, hypotheses, implementation details, and usage scenarios, see [TEST_LIBRARY_DETAILED.md](TEST_LIBRARY_DETAILED.md).
+
 ### 📁 Demo Datasets (`demo_data/` directory)
 
 **11 Ready-to-Use Example Datasets:**
@@ -528,6 +530,7 @@ statistical_app/
 ├── ⚙️  requirements.txt              # Python dependencies
 ├── 📖 README.md                    # This documentation
 ├── 📊 ADVANCED_FEATURES.md         # Advanced features guide
+├── 📖 TEST_LIBRARY_DETAILED.md     # Detailed documentation for 11 core tests
 ├── 🧪 test_app.py                  # Comprehensive testing suite
 ├── 📂 modules/                     # Core application modules
 │   ├── 🎯 test_selector.py          # Intelligent test selection

@@ -17,6 +17,8 @@ from statsmodels.stats.anova import anova_lm
 from statsmodels.formula.api import ols
 import numpy as np
 import openpyxl
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 # ============================================================================
@@ -76,6 +78,238 @@ def load_data(file, delimiter=None, sheet_name=None):
     except Exception as e:
         st.error(f"Błąd podczas ładowania pliku: {e}")
         return None
+
+
+# ============================================================================
+# STEP 5A: Descriptive Statistics Functions
+# ============================================================================
+
+def get_descriptive_stats(df, col):
+    """
+    Calculate comprehensive descriptive statistics for a column.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        The data
+    col : str
+        Column name
+
+    Returns:
+    --------
+    dict
+        Dictionary containing descriptive statistics
+    """
+    col_data = df[col].dropna()
+
+    if pd.api.types.is_numeric_dtype(col_data):
+        # Numerical column
+        stats_dict = {
+            'Count': len(col_data),
+            'Mean': col_data.mean(),
+            'Median': col_data.median(),
+            'Mode': col_data.mode().iloc[0] if len(col_data.mode()) > 0 else None,
+            'Std Dev': col_data.std(),
+            'Variance': col_data.var(),
+            'Min': col_data.min(),
+            'Max': col_data.max(),
+            'Range': col_data.max() - col_data.min(),
+            'Q1 (25%)': col_data.quantile(0.25),
+            'Q3 (75%)': col_data.quantile(0.75),
+            'IQR': col_data.quantile(0.75) - col_data.quantile(0.25),
+            'Skewness': col_data.skew(),
+            'Kurtosis': col_data.kurtosis()
+        }
+    else:
+        # Categorical column
+        value_counts = col_data.value_counts()
+        stats_dict = {
+            'Count': len(col_data),
+            'Unique Values': col_data.nunique(),
+            'Mode': col_data.mode().iloc[0] if len(col_data.mode()) > 0 else None,
+            'Mode Frequency': value_counts.iloc[0] if len(value_counts) > 0 else 0,
+            'Top 5 Categories': ', '.join([f"{val} ({cnt})" for val, cnt in value_counts.head(5).items()])
+        }
+
+    return stats_dict
+
+
+def generate_plots(df, selected_cols):
+    """
+    Generate appropriate plots based on selected column types and count.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        The data
+    selected_cols : list
+        List of selected column names
+
+    Returns:
+    --------
+    list of plotly figures
+        Generated plots
+    """
+    plots = []
+
+    # Identify column types
+    numeric_cols = [col for col in selected_cols if pd.api.types.is_numeric_dtype(df[col])]
+    categorical_cols = [col for col in selected_cols if not pd.api.types.is_numeric_dtype(df[col]) and df[col].nunique() <= 50]
+
+    # Scenario 1: One numerical column - Histogram with KDE
+    if len(numeric_cols) == 1 and len(categorical_cols) == 0:
+        col = numeric_cols[0]
+        fig = px.histogram(df, x=col, marginal="box",
+                          title=f"Distribution of {col}",
+                          labels={col: col},
+                          opacity=0.7)
+        fig.update_layout(showlegend=False)
+        plots.append(('Histogram with Box Plot', fig))
+
+    # Scenario 2: One categorical + One numerical - Box Plot
+    elif len(numeric_cols) == 1 and len(categorical_cols) == 1:
+        num_col = numeric_cols[0]
+        cat_col = categorical_cols[0]
+
+        # Box plot
+        fig1 = px.box(df, x=cat_col, y=num_col,
+                     title=f"{num_col} by {cat_col}",
+                     color=cat_col,
+                     points="all")
+        plots.append(('Box Plot by Category', fig1))
+
+        # Violin plot
+        fig2 = px.violin(df, x=cat_col, y=num_col,
+                        title=f"Distribution of {num_col} by {cat_col}",
+                        color=cat_col,
+                        box=True,
+                        points="all")
+        plots.append(('Violin Plot', fig2))
+
+    # Scenario 3: Two numerical columns - Scatter Plot
+    elif len(numeric_cols) == 2 and len(categorical_cols) == 0:
+        col1, col2 = numeric_cols
+        fig = px.scatter(df, x=col1, y=col2,
+                        title=f"Relationship between {col1} and {col2}",
+                        trendline="ols",
+                        opacity=0.7)
+        plots.append(('Scatter Plot with Trend Line', fig))
+
+    # Scenario 4: One categorical column - Bar Chart
+    elif len(categorical_cols) == 1 and len(numeric_cols) == 0:
+        col = categorical_cols[0]
+        value_counts = df[col].value_counts().reset_index()
+        value_counts.columns = [col, 'Count']
+
+        fig = px.bar(value_counts, x=col, y='Count',
+                    title=f"Frequency of {col}",
+                    color=col)
+        fig.update_layout(showlegend=False)
+        plots.append(('Frequency Bar Chart', fig))
+
+    # Scenario 5: Two categorical columns - Stacked Bar Chart
+    elif len(categorical_cols) == 2:
+        col1, col2 = categorical_cols
+        contingency = pd.crosstab(df[col1], df[col2])
+
+        fig = go.Figure()
+        for col in contingency.columns:
+            fig.add_trace(go.Bar(
+                name=str(col),
+                x=contingency.index,
+                y=contingency[col]
+            ))
+
+        fig.update_layout(
+            title=f"Frequency of {col1} by {col2}",
+            xaxis_title=col1,
+            yaxis_title="Count",
+            barmode='group'
+        )
+        plots.append(('Grouped Bar Chart', fig))
+
+    return plots
+
+
+def display_exploratory_data(df, selected_columns):
+    """
+    Display descriptive statistics and visualizations for selected columns.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        The data
+    selected_columns : list
+        List of selected column names
+    """
+    st.header("📊 Exploratory Data Analysis")
+    st.markdown("Automatic descriptive statistics and visualizations for your selected columns.")
+
+    # Display descriptive statistics
+    st.subheader("📈 Descriptive Statistics")
+
+    for col in selected_columns:
+        with st.expander(f"Statistics for: {col}", expanded=True):
+            stats_dict = get_descriptive_stats(df, col)
+
+            # Create a nice display
+            if pd.api.types.is_numeric_dtype(df[col]):
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric("Count", f"{stats_dict['Count']}")
+                    st.metric("Mean", f"{stats_dict['Mean']:.2f}")
+                    st.metric("Median", f"{stats_dict['Median']:.2f}")
+
+                with col2:
+                    st.metric("Std Dev", f"{stats_dict['Std Dev']:.2f}")
+                    st.metric("Variance", f"{stats_dict['Variance']:.2f}")
+                    st.metric("IQR", f"{stats_dict['IQR']:.2f}")
+
+                with col3:
+                    st.metric("Min", f"{stats_dict['Min']:.2f}")
+                    st.metric("Max", f"{stats_dict['Max']:.2f}")
+                    st.metric("Range", f"{stats_dict['Range']:.2f}")
+
+                # Additional statistics table
+                st.markdown("**Additional Statistics:**")
+                additional_stats = pd.DataFrame({
+                    'Statistic': ['Mode', 'Q1 (25%)', 'Q3 (75%)', 'Skewness', 'Kurtosis'],
+                    'Value': [
+                        f"{stats_dict['Mode']:.2f}" if stats_dict['Mode'] is not None else 'N/A',
+                        f"{stats_dict['Q1 (25%)']:.2f}",
+                        f"{stats_dict['Q3 (75%)']:.2f}",
+                        f"{stats_dict['Skewness']:.2f}",
+                        f"{stats_dict['Kurtosis']:.2f}"
+                    ]
+                })
+                st.table(additional_stats)
+            else:
+                # Categorical statistics
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Count", stats_dict['Count'])
+                    st.metric("Unique Values", stats_dict['Unique Values'])
+                with col2:
+                    st.metric("Mode", str(stats_dict['Mode']))
+                    st.metric("Mode Frequency", stats_dict['Mode Frequency'])
+
+                st.markdown(f"**Top 5 Categories:** {stats_dict['Top 5 Categories']}")
+
+    # Display visualizations
+    st.subheader("📉 Automatic Visualizations")
+    st.markdown("These plots help you visually assess the distribution and relationships in your data.")
+
+    plots = generate_plots(df, selected_columns)
+
+    if len(plots) > 0:
+        for plot_name, fig in plots:
+            st.markdown(f"**{plot_name}**")
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No automatic visualizations available for this column combination. Try selecting different columns.")
+
+    st.markdown("---")
 
 
 # ============================================================================
@@ -971,6 +1205,10 @@ def run_recommender_tool():
             "Dane są sparowane (pomiary przed/po, matched pairs)",
             help="Zaznacz, jeśli wybierasz 2 kolumny numeryczne reprezentujące pomiary na tych samych jednostkach"
         )
+
+        # STEP 5B: Display exploratory data analysis
+        if len(selected_columns) > 0:
+            display_exploratory_data(df, selected_columns)
 
         # STEP 6 & 7: Profiling and recommendation
         if len(selected_columns) > 0:
