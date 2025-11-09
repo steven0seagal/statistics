@@ -223,17 +223,26 @@ def get_recommendation(profile, assumptions, selected_cols):
                 }
         elif num_groups > 2:
             # Three or more groups
-            if is_normal and is_homoscedastic:
-                return {
-                    'name': 'Jednoczynnikowa ANOVA',
-                    'key': 'anova',
-                    'reason': f'Dane są normalne i wariancje równe, porównujemy {num_groups} grup'
-                }
+            if is_normal:
+                # ANOVA is recommended when data are normal
+                # ANOVA is robust to violations of homogeneity of variance, especially with balanced designs
+                if is_homoscedastic:
+                    return {
+                        'name': 'Jednoczynnikowa ANOVA',
+                        'key': 'anova',
+                        'reason': f'Dane są normalne (p={profile[num_col_name].get("p_shapiro", "N/A"):.3f}) i wariancje równe (p Levene={assumptions.get("p_levene", "N/A"):.3f}), porównujemy {num_groups} grup'
+                    }
+                else:
+                    return {
+                        'name': 'Jednoczynnikowa ANOVA',
+                        'key': 'anova',
+                        'reason': f'Dane są normalne (p={profile[num_col_name].get("p_shapiro", "N/A"):.3f}), porównujemy {num_groups} grup. Wariancje nierówne (p Levene={assumptions.get("p_levene", "N/A"):.3f}), ale ANOVA jest odporna przy równolicznych grupach. Użyj testu Games-Howell dla porównań post-hoc.'
+                    }
             else:
                 return {
                     'name': 'Test Kruskala-Wallisa',
                     'key': 'kruskal',
-                    'reason': f'Brak normalności lub równości wariancji przy {num_groups} grupach'
+                    'reason': f'Dane nie mają rozkładu normalnego (p Shapiro={profile[num_col_name].get("p_shapiro", "N/A"):.3f}) przy {num_groups} grupach'
                 }
         else:
             return {
