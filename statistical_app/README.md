@@ -12,6 +12,15 @@ This application bridges the gap between statistical theory and practical applic
 
 ## ✨ Key Features
 
+### 🤖 Automatic Test Recommender (NEW!)
+- **Upload & Analyze**: Simply upload your data and get instant recommendations
+- **Intelligent Profiling**: Automatic detection of numeric vs. categorical columns
+- **Assumption Testing**: Automated normality (Shapiro-Wilk) and homoscedasticity (Levene's) checks
+- **Smart Recommendations**: Decision tree logic recommends the optimal test for your data
+- **One-Click Execution**: Run the recommended test with a single button click
+- **11 Core Tests Supported**: From t-tests to correlations to ANOVA
+- **Demo Datasets Included**: 11 ready-to-use example datasets
+
 ### 🧭 Intelligent Test Selection Wizard
 - **Smart Recommendations**: AI-powered test selection based on data characteristics
 - **Decision Tree Logic**: Step-by-step guidance following statistical best practices
@@ -176,14 +185,15 @@ python run_app.py
 
 ### 🏠 Application Navigation
 
-**7 Main Pages:**
+**8 Main Pages:**
 1. **🏠 Home**: Overview, quick start guide, and feature highlights
 2. **🧭 Test Selection Wizard**: Interactive test recommendation system
 3. **📊 Data Upload & Analysis**: Main analysis workspace
-4. **🔬 Advanced Analysis**: MANOVA, ANCOVA, and multivariate methods
-5. **⚡ Power Analysis**: Sample size calculation and power assessment
-6. **🎓 Educational Content**: Statistical concepts and best practices
-7. **📚 Test Library**: Comprehensive reference for all 28+ tests
+4. **🤖 Automatic Test Recommender**: Upload data and get instant test recommendations
+5. **🔬 Advanced Analysis**: MANOVA, ANCOVA, and multivariate methods
+6. **⚡ Power Analysis**: Sample size calculation and power assessment
+7. **🎓 Educational Content**: Statistical concepts and best practices
+8. **📚 Test Library**: Comprehensive reference for all 28+ tests
 
 ### 🔄 Complete Analysis Workflow
 
@@ -268,19 +278,30 @@ python run_app.py
 
 ### 🎯 Use Case Examples
 
-#### Example 1: Comparing Two Groups
+#### Example 1: Quick Analysis with Automatic Recommender (NEW!)
+**Research Question**: I have data - what test should I use?
+- **Data**: Any CSV/Excel file with your measurements
+- **Recommended Path**: Automatic Test Recommender → Upload → Select columns → Execute
+- **Key Features**:
+  - Automatic column type detection
+  - Normality and variance testing
+  - Instant test recommendation with rationale
+  - One-click execution
+  - Try with demo datasets: `demo_data/demo_ttest_independent.csv`
+
+#### Example 2: Comparing Two Groups
 **Research Question**: Does a new drug improve patient outcomes?
 - **Data**: Patient scores before/after treatment
 - **Recommended Path**: Test Selection Wizard → Paired t-test
 - **Key Features**: Assumption checking, effect size, confidence intervals
 
-#### Example 2: Multiple Group Comparison
+#### Example 3: Multiple Group Comparison
 **Research Question**: Which of 4 treatments is most effective?
 - **Data**: Treatment groups and outcome measures
 - **Recommended Path**: ANOVA → Tukey's post-hoc tests
 - **Key Features**: Multiple comparisons, family-wise error control
 
-#### Example 3: Relationship Analysis
+#### Example 4: Relationship Analysis
 **Research Question**: Is there a relationship between age and response time?
 - **Data**: Age and response time measurements
 - **Recommended Path**: Correlation analysis → Regression modeling
@@ -357,6 +378,125 @@ python run_app.py
 - **Chi-square Power Analysis**: Independence and goodness-of-fit tests
 - **Custom Effect Size Calculations**: Cohen's conventions and user-defined
 
+## 🤖 Automatic Test Recommender - Quick Start Guide
+
+The **Automatic Test Recommender** is the fastest way to analyze your data. Simply upload a file and let the intelligent system guide you through the entire process.
+
+### 🚀 How It Works (5 Simple Steps)
+
+1. **Upload Data**: Drop your CSV, TSV, or Excel file
+2. **Select Columns**: Pick which columns you want to analyze
+3. **Review Profile**: See automatic type detection and assumption tests
+4. **Get Recommendation**: Receive intelligent test suggestion with rationale
+5. **Execute & View Results**: One-click analysis with detailed interpretation
+
+### 📊 Supported Test Types (11 Tests)
+
+**Comparing Groups:**
+- Independent t-test (2 groups, normal, equal variances)
+- Welch's t-test (2 groups, normal, unequal variances)
+- Mann-Whitney U test (2 groups, non-normal)
+- One-way ANOVA (3+ groups, normal, equal variances)
+- Kruskal-Wallis test (3+ groups, non-normal)
+
+**Relationships:**
+- Pearson correlation (2 numeric, both normal)
+- Spearman correlation (2 numeric, non-normal)
+
+**Categorical Analysis:**
+- Chi-square test (2 categorical variables)
+- Fisher's exact test (2x2 table, small samples)
+
+**Paired Data:**
+- Paired t-test (before/after, normal differences)
+- Wilcoxon signed-rank test (before/after, non-normal)
+
+### 📁 Demo Datasets (`demo_data/` directory)
+
+**11 Ready-to-Use Example Datasets:**
+
+1. **demo_ttest_independent.csv** - Independent t-test
+   - Columns: `Wynik_Testu`, `Grupa`
+   - Example: Test scores between control and therapy groups
+
+2. **demo_ttest_welch.csv** - Welch's t-test
+   - Columns: `Poziom_Cholesterolu`, `Dieta`
+   - Example: Cholesterol levels across different diets
+
+3. **demo_mannwhitney.csv** - Mann-Whitney U test
+   - Columns: `Czas_Rekonwalescencji_Dni`, `Metoda_Leczenia`
+   - Example: Recovery times for different treatments
+
+4. **demo_anova.csv** - One-way ANOVA
+   - Columns: `Wzrost_Roslin_cm`, `Rodzaj_Nawozu`
+   - Example: Plant growth across fertilizer types
+
+5. **demo_kruskal.csv** - Kruskal-Wallis test
+   - Columns: `Ocena_Zadowolenia`, `Klinika`
+   - Example: Satisfaction scores across clinics
+
+6. **demo_pearson.csv** - Pearson correlation
+   - Columns: `Wiek_Lat`, `Cisnienie_Skurczowe`
+   - Example: Age vs. blood pressure relationship
+
+7. **demo_spearman.csv** - Spearman correlation
+   - Columns: `Dochod_Roczny`, `Wydatki_Luksusowe`
+   - Example: Income vs. luxury spending
+
+8. **demo_chisquare.csv** - Chi-square test
+   - Columns: `Plec`, `Preferowany_Produkt`
+   - Example: Gender and product preference association
+
+9. **demo_fisher.csv** - Fisher's exact test
+   - Columns: `Leczenie`, `Wynik`
+   - Example: Treatment vs. outcome (small sample)
+
+10. **demo_ttest_paired.csv** - Paired t-test
+    - Columns: `Cisnienie_Przed`, `Cisnienie_Po`
+    - Example: Blood pressure before/after treatment
+
+11. **demo_wilcoxon.csv** - Wilcoxon signed-rank test
+    - Columns: `Poziom_Bolu_Przed`, `Poziom_Bolu_Po`
+    - Example: Pain levels before/after intervention
+
+### 🎯 Workflow Example with Demo Data
+
+```bash
+# Step 1: Navigate to Automatic Test Recommender page
+# Step 2: Upload demo_ttest_independent.csv
+# Step 3: Select both columns: Wynik_Testu and Grupa
+# Step 4: Review automatic analysis:
+#   - Wynik_Testu: Numeric, Normal distribution ✓
+#   - Grupa: Categorical, 2 groups
+#   - Levene's test: Equal variances ✓
+# Step 5: Recommendation: "Independent t-test"
+#   Rationale: "Data are normal and variances are equal"
+# Step 6: Click "Execute Analysis"
+# Step 7: View results with hypotheses, p-value, and interpretation
+```
+
+### ⚙️ Technical Features
+
+**Automatic Column Profiling:**
+- Numeric vs. categorical detection
+- Unique value counting
+- Distribution analysis
+
+**Statistical Assumption Testing:**
+- **Shapiro-Wilk test**: Tests normality of numeric columns
+- **Levene's test**: Tests homogeneity of variances across groups
+
+**Intelligent Decision Tree:**
+- Analyzes column types and counts
+- Checks assumption test results
+- Recommends optimal test with clear rationale
+- Provides alternatives when assumptions are violated
+
+**Session State Management:**
+- Preserves data across interactions
+- Clears state when new file is uploaded
+- Resets analysis when columns change
+
 ## 🎓 Educational System
 
 ### 📚 Comprehensive Learning Resources
@@ -380,26 +520,42 @@ python run_app.py
 #### Application Architecture
 ```
 statistical_app/
-├── 📱 app.py                    # Main Streamlit application (7 pages)
-├── 🚀 run_app.py               # Easy startup script
-├── ⚙️  requirements.txt          # Python dependencies
-├── 📖 README.md                # This documentation
-├── 📊 ADVANCED_FEATURES.md     # Advanced features guide
-├── 🧪 test_app.py              # Comprehensive testing suite
-├── 📂 modules/                 # Core application modules
-│   ├── 🎯 test_selector.py      # Intelligent test selection
-│   ├── 📊 statistical_tests.py  # 15 basic statistical tests
-│   ├── 🔬 advanced_tests.py     # 6 advanced statistical tests
-│   ├── 🔄 post_hoc_tests.py     # 7 post-hoc procedures
-│   ├── 💾 data_processor.py     # Data upload and processing
-│   ├── ✅ assumption_checker.py # Assumption validation
-│   ├── 📈 visualizer.py        # Interactive visualizations
-│   ├── 🧠 interpreter.py       # Results interpretation
-│   ├── ⚡ power_analysis.py    # Power analysis & sample size
-│   └── 📝 report_generator.py  # Professional report generation
-├── 📊 data/                    # Built-in datasets
-│   └── example_datasets/       # 5 sample datasets
-└── 📚 docs/                    # Documentation
+├── 📱 app.py                        # Main Streamlit application (8 pages)
+├── 🤖 statistical_recommender.py    # NEW: Automatic test recommender
+├── 🧪 test_recommender.py          # NEW: Test suite for recommender
+├── 📊 generate_demo_data.py        # NEW: Demo dataset generator
+├── 🚀 run_app.py                   # Easy startup script
+├── ⚙️  requirements.txt              # Python dependencies
+├── 📖 README.md                    # This documentation
+├── 📊 ADVANCED_FEATURES.md         # Advanced features guide
+├── 🧪 test_app.py                  # Comprehensive testing suite
+├── 📂 modules/                     # Core application modules
+│   ├── 🎯 test_selector.py          # Intelligent test selection
+│   ├── 📊 statistical_tests.py      # 15 basic statistical tests
+│   ├── 🔬 advanced_tests.py         # 6 advanced statistical tests
+│   ├── 🔄 post_hoc_tests.py         # 7 post-hoc procedures
+│   ├── 💾 data_processor.py         # Data upload and processing
+│   ├── ✅ assumption_checker.py     # Assumption validation
+│   ├── 📈 visualizer.py            # Interactive visualizations
+│   ├── 🧠 interpreter.py           # Results interpretation
+│   ├── ⚡ power_analysis.py        # Power analysis & sample size
+│   └── 📝 report_generator.py      # Professional report generation
+├── 📊 demo_data/                   # NEW: 11 demo datasets
+│   ├── demo_ttest_independent.csv  # Independent t-test example
+│   ├── demo_ttest_welch.csv       # Welch's t-test example
+│   ├── demo_mannwhitney.csv       # Mann-Whitney U example
+│   ├── demo_anova.csv             # One-way ANOVA example
+│   ├── demo_kruskal.csv           # Kruskal-Wallis example
+│   ├── demo_pearson.csv           # Pearson correlation example
+│   ├── demo_spearman.csv          # Spearman correlation example
+│   ├── demo_chisquare.csv         # Chi-square test example
+│   ├── demo_fisher.csv            # Fisher's exact test example
+│   ├── demo_ttest_paired.csv      # Paired t-test example
+│   ├── demo_wilcoxon.csv          # Wilcoxon test example
+│   └── README.md                  # Demo data documentation
+├── 📊 data/                        # Built-in datasets
+│   └── example_datasets/           # 5 sample datasets
+└── 📚 docs/                        # Documentation
     └── additional resources
 ```
 
