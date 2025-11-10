@@ -25,6 +25,7 @@ from modules.advanced_tests import AdvancedStatisticalTests
 from modules.power_analysis import PowerAnalysis
 from modules.report_generator import ReportGenerator
 from modules.post_hoc_tests import PostHocTests
+from modules.regression_module import run_regression_module
 import statistical_recommender
 
 # Configure Streamlit page
@@ -84,7 +85,7 @@ def main():
         "Choose a page:",
         ["Home", "Test Selection Wizard", "Data Upload & Analysis",
          "Automatic Test Recommender", "Advanced Analysis",
-         "Power Analysis", "Educational Content", "Test Library"]
+         "Power Analysis", "Regression Analysis", "Educational Content", "Test Library"]
     )
 
     # Initialize session state
@@ -108,6 +109,8 @@ def main():
         show_advanced_analysis_page()
     elif page == "Power Analysis":
         show_power_analysis_page()
+    elif page == "Regression Analysis":
+        run_regression_module()
     elif page == "Educational Content":
         show_educational_content()
     elif page == "Test Library":
@@ -489,7 +492,8 @@ def show_educational_content():
             "Choosing the Right Test",
             "Understanding P-values",
             "Effect Sizes and Practical Significance",
-            "Common Statistical Mistakes"
+            "Common Statistical Mistakes",
+            "Regression Analysis: Linear and Logarithmic"
         ]
     )
 
@@ -497,6 +501,8 @@ def show_educational_content():
         show_intro_content()
     elif topic == "Hypothesis Testing Fundamentals":
         show_hypothesis_content()
+    elif topic == "Regression Analysis: Linear and Logarithmic":
+        show_regression_content()
     else:
         st.write(f"Content for '{topic}' coming soon!")
 
@@ -557,6 +563,138 @@ def show_hypothesis_content():
     6. **Make Decision**
        - If p ≤ α: Reject H₀ (statistically significant)
        - If p > α: Fail to reject H₀ (not statistically significant)
+    """)
+
+def show_regression_content():
+    """Show regression analysis educational content"""
+
+    st.markdown("""
+    ## 📈 Analiza Regresji: Liniowa i Logarytmiczna
+
+    Analiza regresji to jedna z fundamentalnych technik statystycznych. Jej celem jest **modelowanie zależności**
+    między zmiennymi. Najczęściej chcemy zrozumieć, jak jedna zmienna (zależna, $Y$) zmienia się, gdy zmienia
+    się inna zmienna (niezależna, $X$).
+
+    ### Czym jest Regresja Liniowa?
+
+    Regresja liniowa jest najprostszym typem regresji. Zakłada ona, że zależność między zmienną $X$ a $Y$
+    można opisać za pomocą **linii prostej**.
+
+    #### Wzór
+
+    Model opisany jest prostym równaniem:
+
+    $$
+    y = ax + b
+    $$
+
+    Gdzie:
+
+    * **$y$** – Wartość prognozowana (zmienna zależna).
+    * **$x$** – Wartość zmiennej niezależnej.
+    * **$a$** – **Współczynnik nachylenia** (slope). Mówi nam, o ile *średnio* zmieni się $y$, jeśli $x$ wzrośnie o jedną jednostkę.
+    * **$b$** – **Wyraz wolny** (intercept). Jest to punkt przecięcia linii z osią $Y$, czyli wartość $y$, gdy $x$ wynosi 0.
+
+    #### Jak się ją liczy?
+
+    Najpopularniejszą metodą jest **Metoda Najmniejszych Kwadratów (Ordinary Least Squares - OLS)**.
+    Komputer szuka takiej linii (czyli takich wartości $a$ i $b$), która minimalizuje sumę kwadratów odległości
+    (tzw. "błędów" lub "rezyduów") między rzeczywistymi punktami danych a linią regresji.
+
+    #### Kiedy jej używać?
+
+    * Gdy na wykresie punktowym dane wydają się układać wzdłuż linii prostej.
+    * Gdy zakładamy stałe tempo zmiany (np. koszt wyprodukowania 10 sztuk jest 10 razy większy niż 1 sztuki).
+    * Jako model bazowy do porównania z bardziej skomplikowanymi modelami.
+
+    ---
+
+    ### Czym jest Regresja Logarytmiczna?
+
+    Regresja logarytmiczna jest modelem krzywoliniowym. Jest idealna do opisywania sytuacji, w których
+    zależność **szybko rośnie na początku, a następnie zwalnia** (lub nasyca się).
+
+    #### Wzór
+
+    Model opisany jest równaniem:
+
+    $$
+    y = a \\cdot \\ln(x) + b
+    $$
+
+    Gdzie:
+
+    * **$y$**, **$a$**, **$b$** – Mają podobne znaczenie jak w regresji liniowej.
+    * **$\\ln(x)$** – **Logarytm naturalny** ze zmiennej $x$.
+
+    **Ważna uwaga:** Model ten można stosować tylko wtedy, gdy wartości zmiennej niezależnej $X$ są
+    **dodatnie** ($x > 0$), ponieważ logarytm z zera lub liczb ujemnych jest niezdefiniowany.
+
+    #### Jak się ją liczy?
+
+    Najczęściej sprowadza się to do prostego triku:
+
+    1. Tworzymy nową zmienną, $X' = \\ln(X)$.
+    2. Wykonujemy **regresję liniową** na danych $(X', Y)$.
+       Model, który otrzymujemy, to $y = a \\cdot X' + b$, co po podstawieniu $X'$ daje nam $y = a \\cdot \\ln(x) + b$.
+
+    #### Kiedy jej używać?
+
+    * Gdy obserwujemy **prawo malejących przychodów**. Na przykład:
+        * Wpływ wydatków na reklamę na sprzedaż (pierwsza wydana złotówka przynosi duży zwrot, ale milionowa już znacznie mniejszy).
+        * Wpływ liczby godzin nauki na wynik egzaminu (przejście z 0 na 2 godziny daje duży skok; przejście z 10 na 12 godzin – niewielki).
+    * Gdy tempo wzrostu $Y$ maleje wraz ze wzrostem $X$.
+
+    ---
+
+    ### Jak ocenić, który model jest lepszy?
+
+    Po dopasowaniu obu modeli do tych samych danych, musimy zdecydować, który z nich jest lepszy.
+    Używamy do tego dwóch kluczowych metryk:
+
+    #### 1. R-kwadrat (R²) – Współczynnik Determinacji
+
+    * **Co mierzy:** Jak dobrze model (linia lub krzywa) **wyjaśnia zmienność** w danych.
+    * **Interpretacja:** Jest to wartość od 0 do 1 (lub 0% do 100%).
+        * R² = 0.85 oznacza, że 85% zmienności w $Y$ jest wyjaśniane przez zmienną $X$ za pomocą naszego modelu.
+    * **Wybór:** **Im wyższy R², tym (zazwyczaj) lepszy model.** Lepsze dopasowanie do danych.
+
+    #### 2. Błąd Średniokwadratowy (Mean Squared Error - MSE)
+
+    * **Co mierzy:** Średnią kwadratów błędów (różnic między wartością rzeczywistą $y$ a prognozowaną $\\hat{y}$).
+    * **Interpretacja:** Jest to miara błędu prognozy. Ponieważ błędy są podnoszone do kwadratu, metryka ta
+      bardzo **mocno "karze" duże błędy**.
+    * **Wybór:** **Im niższy MSE, tym lepszy model.** Oznacza to, że prognozy modelu są średnio bliższe prawdy.
+
+    #### Wnioskowanie:
+
+    Najczęściej szukamy modelu, który ma **jednocześnie wysoki R² i niski MSE**.
+
+    ### Problem Overfittingu (Przeuczenia)
+
+    Overfitting to jeden z największych problemów w modelowaniu.
+
+    * **Definicja:** Zjawisko, w którym model jest **zbyt skomplikowany** i zamiast uczyć się ogólnego trendu
+      w danych, zaczyna "wkuwać na pamięć" dane treningowe, łącznie z przypadkowym szumem.
+    * **Skutek:** Taki model ma fantastyczne metryki (np. R² bliskie 1.0) na danych, na których był uczony,
+      ale kompletnie nie potrafi przewidywać nowych, nieznanych mu danych.
+    * **Jak się chronić:** W przypadku prostych modeli (jak regresja liniowa czy logarytmiczna z jedną zmienną)
+      ryzyko jest bardzo małe. Problem pojawia się przy modelach bardzo złożonych (np. wielomiany wysokiego stopnia,
+      głębokie sieci neuronowe).
+    * **Podstawowa zasada:** Zawsze należy dążyć do modelu **możliwie najprostszego**, który wciąż dobrze wyjaśnia
+      dane (tzw. "Zasada Oszczędności" lub "Brzytwa Ockhama").
+
+    ---
+
+    ### 💡 Podsumowanie
+
+    * **Regresja liniowa** jest odpowiednia dla zależności liniowych (stałe tempo zmiany).
+    * **Regresja logarytmiczna** jest lepsza dla zależności, które zwalniają wraz ze wzrostem X (malejące przychody).
+    * Porównujemy modele używając **R²** (wyższe = lepsze) i **MSE** (niższe = lepsze).
+    * Proste modele minimalizują ryzyko przeuczenia (overfitting).
+    * Zawsze należy rozważyć praktyczne znaczenie wyników, nie tylko statystyczne dopasowanie.
+
+    **Zachęcamy do eksperymentowania z modułem Analizy Regresji, aby zobaczyć te koncepcje w praktyce!**
     """)
 
 def show_test_library():
