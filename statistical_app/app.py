@@ -497,6 +497,7 @@ def show_educational_content():
             "Effect Sizes and Practical Significance",
             "Common Statistical Mistakes",
             "Regression Analysis: Linear and Logarithmic",
+            "Multiple Linear Regression (MLR)",
             "K-Means Clustering"
         ]
     )
@@ -507,6 +508,8 @@ def show_educational_content():
         show_hypothesis_content()
     elif topic == "Regression Analysis: Linear and Logarithmic":
         show_regression_content()
+    elif topic == "Multiple Linear Regression (MLR)":
+        show_mlr_content()
     elif topic == "K-Means Clustering":
         show_kmeans_content()
     else:
@@ -699,6 +702,98 @@ def show_regression_content():
     * Porównujemy modele używając **R²** (wyższe = lepsze) i **MSE** (niższe = lepsze).
     * Proste modele minimalizują ryzyko przeuczenia (overfitting).
     * Zawsze należy rozważyć praktyczne znaczenie wyników, nie tylko statystyczne dopasowanie.
+
+    **Zachęcamy do eksperymentowania z modułem Analizy Regresji, aby zobaczyć te koncepcje w praktyce!**
+    """)
+
+def show_mlr_content():
+    """Show Multiple Linear Regression educational content"""
+
+    st.markdown("""
+    ## 📊 Wielokrotna Regresja Liniowa (Multiple Linear Regression - MLR)
+
+    Wielokrotna Regresja Liniowa (MLR) to rozszerzenie Regresji Liniowej Prostej. Zamiast używać tylko jednej zmiennej $X$ do przewidywania $Y$, MLR pozwala nam używać **wielu zmiennych $X$ jednocześnie**.
+
+    Jest to jedna z najczęściej używanych technik w statystyce i data science, pozwalająca na budowanie bardziej złożonych i dokładniejszych modeli prognozujących.
+
+    ### Wzór
+
+    Podczas gdy regresja prosta miała wzór $y = ax + b$, regresja wielokrotna ma postać:
+
+    $$
+    y = b_0 + a_1x_1 + a_2x_2 + \\dots + a_kx_k
+    $$
+
+    Gdzie:
+
+    * **$y$** – Wartość prognozowana (zmienna zależna).
+    * **$x_1, x_2, \\dots, x_k$** – Zmienne niezależne (predyktory).
+    * **$b_0$** – **Wyraz wolny** (intercept). Wartość $y$, gdy wszystkie zmienne $x$ są równe zero.
+    * **$a_1, a_2, \\dots, a_k$** – **Współczynniki** regresji.
+
+    ### Jak interpretować współczynniki (to kluczowe!)
+
+    Interpretacja współczynnika $a$ w MLR jest inna niż w regresji prostej.
+
+    > Współczynnik **$a_1$** mówi nam, o ile *średnio* zmieni się $y$, jeśli $x_1$ wzrośnie o jedną jednostkę, **przy założeniu, że wszystkie pozostałe zmienne ($x_2, \\dots, x_k$) pozostają bez zmian**.
+
+    Jest to miara "czystego" wpływu danej zmiennej $x_1$ na $y$, po wyizolowaniu wpływu pozostałych zmiennych uwzględnionych w modelu.
+
+    **Przykład:** Model ceny mieszkania:
+    `Cena = 50000 + (7000 * Liczba_Pokoi) + (300 * Powierzchnia_m2)`
+
+    * Współczynnik `7000` oznacza, że (według modelu) dodanie jednego pokoju podnosi cenę o 7000 zł, **przy tej samej powierzchni**.
+    * Współczynnik `300` oznacza, że każdy dodatkowy m² podnosi cenę o 300 zł, **przy tej samej liczbie pokoi**.
+
+    ---
+
+    ### Metryki Oceny: R² vs. R² Skorygowany
+
+    W regresji wielokrotnej pojawia się nowy, ważniejszy wskaźnik.
+
+    #### R-kwadrat (R²)
+
+    Mówi, jaki procent zmienności $Y$ jest wyjaśniany przez *wszystkie* zmienne $X$ w modelu.
+
+    * **Problem:** Wartość R² **zawsze rośnie (lub pozostaje taka sama)**, gdy dodajemy do modelu nową zmienną $X$, nawet jeśli ta zmienna jest kompletnie losowa i nie ma żadnego związku z $Y$. To zachęca do budowania przeuczonych (overfitted) modeli.
+
+    #### R-kwadrat Skorygowany (Adjusted R²)
+
+    To jest ulepszona wersja R², która rozwiązuje ten problem.
+
+    * **Co robi:** "Karze" model za posiadanie wielu zmiennych. R² Skorygowany rośnie tylko wtedy, gdy dodana nowa zmienna wnosi do modelu **istotną** moc wyjaśniającą.
+    * **Interpretacja:** Jeśli dodasz do modelu nową zmienną $X$ i R² Skorygowany spadnie, oznacza to, że ta zmienna jest zbędna i pogarsza jakość modelu (prawdopodobnie dodaje więcej szumu niż sygnału).
+
+    **Wniosek: Przy Wielokrotnej Regresji Liniowej zawsze używaj R-kwadrat Skorygowanego do oceny i porównywania modeli.**
+
+    ---
+
+    ### Największe Zagrożenia w MLR
+
+    #### 1. Overfitting (Przeuczenie)
+
+    * **Problem:** Dodanie zbyt wielu zmiennych $X$, szczególnie przy małej ilości danych. Model zaczyna "uczyć się na pamięć" szumu w danych, zamiast ogólnego trendu.
+    * **Skutek:** Model będzie miał świetny R² na danych treningowych, ale fatalnie poradzi sobie z prognozowaniem nowych, nieznanych danych.
+    * **Obrona:** Używaj R² Skorygowanego; stosuj Zasadę Oszczędności (wybieraj najprostszy model, który dobrze działa).
+
+    #### 2. Multikolinearność (Współliniowość)
+
+    * **Problem:** Sytuacja, w której dwie lub więcej zmiennych $X$ są ze sobą silnie skorelowane (np. `waga_w_kg` i `waga_w_funtach`, albo `wzrost` i `długość_nogi`).
+    * **Skutek:** Algorytm regresji "głupieje". Nie wie, której ze skorelowanych zmiennych przypisać wpływ na $Y$. Powoduje to, że:
+        * Współczynniki ($a_1, a_2$) stają się bardzo niestabilne.
+        * Mogą mieć absurdalne wartości lub znaki (np. model mówi, że wzrost *obniża* wagę, bo źle rozdzielił wpływ).
+    * **Obrona:** Sprawdź korelację między zmiennymi $X$ *przed* zbudowaniem modelu. Jeśli dwie zmienne mają korelację > 0.8 (lub < -0.8), rozważ usunięcie jednej z nich.
+
+    ---
+
+    ### 💡 Podsumowanie
+
+    * **Wielokrotna Regresja Liniowa** pozwala modelować wpływ wielu zmiennych $X$ na $Y$ jednocześnie.
+    * **Współczynniki** pokazują "czysty" wpływ każdej zmiennej, po kontroli pozostałych.
+    * **R² Skorygowany** jest lepszą metryką niż zwykły R², ponieważ karze za zbędne zmienne.
+    * **Overfitting** jest większym zagrożeniem niż w regresji prostej – uważaj na dodawanie zbyt wielu zmiennych.
+    * **Multikolinearność** między predyktorami może prowadzić do niestabilnych i mylących wyników.
+    * Zawsze dąż do **najprostszego modelu**, który wystarczająco dobrze wyjaśnia dane (Zasada Oszczędności).
 
     **Zachęcamy do eksperymentowania z modułem Analizy Regresji, aby zobaczyć te koncepcje w praktyce!**
     """)
