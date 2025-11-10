@@ -1,289 +1,357 @@
-na podtawie podanych informacji znajdź w repo miejsce gdzie jest dokumentacja i dadaj poniższe dane 
-
-Oto rozszerzona dokumentacja dla każdego z 11 testów statystycznych.
-
-Możesz użyć tych opisów jako dokumentacji technicznej dla agenta implementującego lub jako treści pomocy i interpretacji dla użytkowników końcowych w Twojej aplikacji.
+Jasne, oto kompleksowy plan dla agenta kodującego oraz treść merytoryczna do modułu "Baza Wiedzy".
 
 -----
 
-## I. Testy do Porównywania Grup
+## 🚀 Plan dla Agenta: Budowa Modułu Regresji
 
-Służą do sprawdzania, czy istnieją statystycznie istotne różnice w wartościach liczbowych między dwiema lub większą liczbą grup kategorycznych.
+Oto szczegółowy plan krok po kroku, jak zaimplementować moduł analizy regresji w aplikacji Streamlit.
 
-### 1\. Test t dla prób niezależnych (Independent T-test)
+**Cel:** Stworzenie nowej "strony" (modułu) w aplikacji, która pozwala użytkownikowi na wgranie danych (lub użycie demo), wybranie zmiennych, a następnie przeprowadzenie i porównanie regresji liniowej i logarytmicznej.
 
-  * **Cel:** 🎯 Porównuje **średnie** dwóch **niezależnych** od siebie grup, aby stwierdzić, czy różnica między nimi jest statystycznie istotna.
-  * **Scenariusz aplikacji:** 🧑‍🤝‍🧑 Użytkownik wybrał **1 kolumnę numeryczną** (np. 'Wynik') i **1 kolumnę kategoryczną** (np. 'Grupa'), która ma dokładnie **2 unikalne wartości** (np. 'A' i 'B').
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Normalność:** Dane w kolumnie numerycznej mają rozkład normalny (sprawdzone **Testem Shapiro-Wilka**, p \> 0.05).
-    2.  **Homogeniczność wariancji:** Wariancje (zmienność) w obu grupach są równe (sprawdzone **Testem Levene'a**, p \> 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0 (Hipoteza Zerowa):** Średnia wartość w grupie A jest równa średniej wartości w grupie B.
-      * **H1 (Hipoteza Alternatywna):** Średnia wartość w grupie A jest różna od średniej wartości w grupie B.
-  * **Implementacja (Python):** 🐍
-    ```python
-    # data1, data2 = grupy danych z Pandasa
-    from scipy.stats import ttest_ind
-    stat, p_value = ttest_ind(data1, data2, equal_var=True)
-    ```
+### 1\. Struktura Pliku i Importy
 
-### 2\. Test t Welcha (Welch's T-test)
+Zalecam utworzenie nowego pliku, np. `regression_module.py`.
 
-  * **Cel:** 🎯 Porównuje **średnie** dwóch **niezależnych** grup, gdy ich **wariancje są różne**. Jest to modyfikacja standardowego testu t.
-  * **Scenariusz aplikacji:** 🧑‍🤝‍🧑 Użytkownik wybrał **1 kolumnę numeryczną** i **1 kolumnę kategoryczną** (z 2 grupami).
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Normalność:** Dane w kolumnie numerycznej mają rozkład normalny (Test Shapiro-Wilka, p \> 0.05).
-    2.  **Brak homogeniczności wariancji:** Wariancje w obu grupach są **różne** (Test Levene'a, p \<= 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Średnia wartość w grupie A jest równa średniej wartości w grupie B.
-      * **H1:** Średnia wartość w grupie A jest różna od średniej wartości w grupie B.
-  * **Implementacja (Python):** 🐍
-    ```python
-    from scipy.stats import ttest_ind
-    stat, p_value = ttest_ind(data1, data2, equal_var=False) # Kluczowa zmiana
-    ```
+**Wymagane biblioteki:**
 
-### 3\. Test U Manna-Whitneya (Mann-Whitney U Test)
+```python
+import streamlit as st
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
+import plotly.express as px
+import plotly.graph_objects as go
+```
 
-  * **Cel:** 🎯 **Nieparametryczny** odpowiednik testu t. Porównuje **mediany** (lub ogólnie rozkłady) dwóch **niezależnych** grup.
-  * **Scenariusz aplikacji:** 🧑‍🤝‍🧑 Użytkownik wybrał **1 kolumnę numeryczną** i **1 kolumnę kategoryczną** (z 2 grupami).
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Brak normalności:** Dane w kolumnie numerycznej **nie mają** rozkładu normalnego (Test Shapiro-Wilka, p \<= 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Rozkłady wartości w obu grupach są takie same (lub: mediana w grupie A jest równa medianie w grupie B).
-      * **H1:** Rozkłady wartości w obu grupach różnią się (lub: mediana w grupie A jest różna od mediany w grupie B).
-  * **Implementacja (Python):** 🐍
-    ```python
-    from scipy.stats import mannwhitneyu
-    stat, p_value = mannwhitneyu(data1, data2)
-    ```
+### 2\. Główna Funkcja Modułu
 
-### 4\. Jednoczynnikowa ANOVA (One-Way ANOVA)
+Stwórz główną funkcję, która będzie wywoływana przez główną nawigację aplikacji.
 
-  * **Cel:** 🎯 Porównuje **średnie** w **trzech lub więcej** niezależnych grupach, aby sprawdzić, czy co najmniej jedna grupa różni się od pozostałych.
-  * **Scenariusz aplikacji:** 👨‍👩‍👧‍👦 Użytkownik wybrał **1 kolumnę numeryczną** i **1 kolumnę kategoryczną**, która ma **3 lub więcej** unikalnych wartości (np. 'Grupa A', 'Grupa B', 'Grupa C').
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Normalność:** Dane w kolumnie numerycznej mają rozkład normalny (Test Shapiro-Wilka, p \> 0.05).
-    2.  **Homogeniczność wariancji:** Wariancje we wszystkich grupach są równe (Test Levene'a, p \> 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Średnie wartości we wszystkich grupach są sobie równe.
-      * **H1:** Co najmniej jedna grupa ma średnią wartość różną od pozostałych.
-  * **Implementacja (Python):** 🐍
-    ```python
-    # groups_data = [data_A, data_B, data_C, ...]
-    from scipy.stats import f_oneway
-    stat, p_value = f_oneway(*groups_data)
-    ```
+```python
+def run_regression_module():
+    st.title("📈 Moduł Analizy Regresji")
+    st.markdown("Analizuj i porównuj modele regresji liniowej i logarytmicznej.")
+    
+    # Krok 1: Wprowadzenie Danych
+    # Krok 2: Wybór Zmiennych
+    # Krok 3: Analiza i Wizualizacja
+```
 
-### 5\. Test Kruskala-Wallisa (Kruskal-Wallis H Test)
+### 3\. Krok 1: Wprowadzenie Danych (z Demo)
 
-  * **Cel:** 🎯 **Nieparametryczny** odpowiednik testu ANOVA. Porównuje **mediany** (lub rozkłady) w **trzech lub więcej** niezależnych grupach.
-  * **Scenariusz aplikacji:** 👨‍👩‍👧‍👦 Użytkownik wybrał **1 kolumnę numeryczną** i **1 kolumnę kategoryczną** (z 3+ grupami).
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Brak normalności:** Dane w kolumnie numerycznej **nie mają** rozkładu normalnego (Test Shapiro-Wilka, p \<= 0.05) LUB
-    2.  **Brak homogeniczności wariancji:** Wariancje w grupach są **różne** (Test Levene'a, p \<= 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Rozkłady wartości we wszystkich grupach są takie same (lub: mediany we wszystkich grupach są równe).
-      * **H1:** Co najmniej jedna grupa ma rozkład wartości różny od pozostałych (lub: co najmniej jedna mediana jest różna).
-  * **Implementacja (Python):** 🐍
-    ```python
-    # groups_data = [data_A, data_B, data_C, ...]
-    from scipy.stats import kruskal
-    stat, p_value = kruskal(*groups_data)
-    ```
+Użyj `st.sidebar` lub `st.tabs` do wyboru źródła danych.
+
+```python
+    # === SEKCJA 1: ŹRÓDŁO DANYCH ===
+    st.sidebar.header("1. Wprowadź Dane")
+    data_source = st.sidebar.radio(
+        "Wybierz źródło danych:",
+        ("Użyj danych demo", "Wprowadź własne dane")
+    )
+    
+    df = None # Inicjalizacja DataFrame
+
+    # --- Dane Demo ---
+    def get_demo_data_linear():
+        X = np.linspace(1, 50, 100)
+        y = 2.5 * X + 4 + np.random.randn(100) * 8 # Silna korelacja liniowa + szum
+        return pd.DataFrame({'X_lin': X, 'Y_lin': y})
+
+    def get_demo_data_log():
+        X = np.linspace(1, 50, 100)
+        y = 3 * np.log(X) + 2 + np.random.randn(100) * 0.5 # Korelacja logarytmiczna + szum
+        return pd.DataFrame({'X_log': X, 'Y_log': y})
+
+    if data_source == "Użyj danych demo":
+        demo_type = st.sidebar.selectbox("Wybierz typ danych demo:", ["Dane Liniowe", "Dane Logarytmiczne"])
+        if demo_type == "Dane Liniowe":
+            df = get_demo_data_linear()
+        else:
+            df = get_demo_data_log()
+
+    # --- Własne Dane ---
+    else:
+        uploaded_file = st.sidebar.file_uploader("Wgraj plik CSV lub Excel", type=["csv", "xlsx"])
+        if uploaded_file:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+            except Exception as e:
+                st.error(f"Błąd podczas wczytywania pliku: {e}")
+
+    # Jeśli dane nie są wczytane, zakończ działanie modułu w tym miejscu
+    if df is None or df.empty:
+        st.info("Proszę wczytać dane lub wybrać zestaw demo, aby rozpocząć analizę.")
+        st.stop()
+
+    st.subheader("Podgląd Danych")
+    st.dataframe(df.head())
+```
+
+### 4\. Krok 2: Wybór Zmiennych
+
+Pozwól użytkownikowi wybrać, które kolumny to X i Y.
+
+```python
+    # === SEKCJA 2: WYBÓR ZMIENNYCH ===
+    st.sidebar.header("2. Konfiguracja Modelu")
+    
+    # Wybierz tylko kolumny numeryczne
+    numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+    
+    if len(numeric_cols) < 2:
+        st.warning("Twoje dane muszą zawierać co najmniej dwie kolumny numeryczne.")
+        st.stop()
+
+    col_x = st.sidebar.selectbox("Wybierz zmienną niezależną (X):", numeric_cols)
+    # Usuń wybraną kolumnę X z listy dostępnych dla Y
+    available_y_cols = [col for col in numeric_cols if col != col_x]
+    col_y = st.sidebar.selectbox("Wybierz zmienną zależną (Y):", available_y_cols)
+```
+
+### 5\. Krok 3: Analiza i Wizualizacja
+
+To jest rdzeń modułu. Przeprowadź obliczenia i wyświetl wyniki.
+
+```python
+    # === SEKCJA 3: ANALIZA I WYNIKI ===
+    
+    # Przygotowanie danych (usuwanie braków danych)
+    analysis_df = df[[col_x, col_y]].dropna()
+    X_raw = analysis_df[[col_x]]
+    y = analysis_df[col_y]
+
+    if X_raw.empty or y.empty:
+        st.error("Wybrane kolumny nie zawierają danych po usunięciu braków (NaN).")
+        st.stop()
+
+    st.header("Wyniki Analizy Regresji")
+    
+    # Użyj kolumn do prezentacji wyników
+    col1, col2 = st.columns(2)
+
+    # --- Model Liniowy ---
+    with col1:
+        st.subheader("Model Liniowy")
+        st.markdown("`y = a * x + b`")
+        
+        model_lin = LinearRegression()
+        model_lin.fit(X_raw, y)
+        y_pred_lin = model_lin.predict(X_raw)
+        
+        a_lin = model_lin.coef_[0]
+        b_lin = model_lin.intercept_
+        r2_lin = r2_score(y, y_pred_lin)
+        mse_lin = mean_squared_error(y, y_pred_lin)
+        
+        st.metric("R-kwadrat (R²)", f"{r2_lin:.4f}")
+        st.metric("Błąd Średniokw. (MSE)", f"{mse_lin:.4f}")
+        st.write(f"**Wzór:** `y = {a_lin:.3f} * x + {b_lin:.3f}`")
+
+    # --- Model Logarytmiczny ---
+    with col2:
+        st.subheader("Model Logarytmiczny")
+        st.markdown("`y = a * ln(x) + b`")
+
+        # Model logarytmiczny wymaga X > 0
+        log_df = analysis_df[analysis_df[col_x] > 0]
+        if log_df.empty:
+            st.warning("Model logarytmiczny wymaga wartości X > 0. Brak danych do analizy.")
+            r2_log, mse_log, a_log, b_log = (np.nan,)*4 # Ustaw jako NaN
+        else:
+            X_log_transformed = np.log(log_df[[col_x]]) # Transformacja X -> ln(X)
+            y_log_target = log_df[col_y]
+            
+            model_log = LinearRegression()
+            model_log.fit(X_log_transformed, y_log_target)
+            y_pred_log = model_log.predict(X_log_transformed)
+            
+            a_log = model_log.coef_[0]
+            b_log = model_log.intercept_
+            r2_log = r2_score(y_log_target, y_pred_log)
+            mse_log = mean_squared_error(y_log_target, y_pred_log)
+
+            st.metric("R-kwadrat (R²)", f"{r2_log:.4f}")
+            st.metric("Błąd Średniokw. (MSE)", f"{mse_log:.4f}")
+            st.write(f"**Wzór:** `y = {a_log:.3f} * ln(x) + {b_log:.3f}`")
+            st.caption(f"Analiza przeprowadzona na {len(log_df)} wierszach (gdzie {col_x} > 0).")
+
+    # --- Wizualizacja ---
+    st.subheader("Wizualizacja Dopasowania")
+    
+    # Stwórz wykres punktowy
+    fig = px.scatter(analysis_df, x=col_x, y=col_y, title="Dopasowanie Modeli Regresji", labels={col_x: f"X: {col_x}", col_y: f"Y: {col_y}"})
+    
+    # Dodaj linię regresji liniowej
+    fig.add_trace(go.Scatter(x=X_raw[col_x], y=y_pred_lin, mode='lines', name=f"Liniowa (R²={r2_lin:.3f})", line=dict(color='red', width=3)))
+    
+    # Dodaj linię regresji logarytmicznej (jeśli obliczona)
+    if not np.isnan(r2_log):
+        # Sortuj wartości dla gładkiej linii
+        log_df_sorted = log_df.sort_values(by=col_x)
+        X_log_plot = np.log(log_df_sorted[[col_x]])
+        y_pred_log_plot = model_log.predict(X_log_plot)
+        
+        fig.add_trace(go.Scatter(x=log_df_sorted[col_x], y=y_pred_log_plot, mode='lines', name=f"Logarytm. (R²={r2_log:.3f})", line=dict(color='green', width=3)))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # === SEKCJA 4: INTERPRETACJA I OVERFITTING ===
+    st.header("Wybór Modelu i Interpretacja")
+
+    # Porównanie
+    if np.isnan(r2_log) and not np.isnan(r2_lin):
+        st.info("Tylko model liniowy mógł zostać obliczony (model logarytmiczny wymaga X > 0).")
+    elif np.isnan(r2_lin) and np.isnan(r2_log):
+        st.error("Nie można było obliczyć żadnego modelu.")
+    else:
+        # Porównanie R²
+        if r2_lin > r2_log:
+            st.success(f"**Model Liniowy wydaje się lepiej dopasowany.** Posiada wyższy współczynnik R² ({r2_lin:.4f}) w porównaniu do modelu logarytmicznego ({r2_log:.4f}).")
+        elif r2_log > r2_lin:
+            st.success(f"**Model Logarytmiczny wydaje się lepiej dopasowany.** Posiada wyższy współczynnik R² ({r2_log:.4f}) w porównaniu do modelu liniowego ({r2_lin:.4f}).")
+        else:
+            st.info(f"Oba modele mają identyczny współczynnik R² ({r2_lin:.4f}).")
+            
+        # Porównanie MSE
+        if mse_lin < mse_log:
+            st.success(f"Model Liniowy ma również **mniejszy błąd średniokwadratowy (MSE)** ({mse_lin:.4f} vs {mse_log:.4f}), co oznacza, że jego prognozy są średnio bliższe rzeczywistym wartościom.")
+        elif mse_log < mse_lin:
+            st.success(f"Model Logarytmiczny ma również **mniejszy błąd średniokwadratowy (MSE)** ({mse_log:.4f} vs {mse_lin:.4f}), co oznacza, że jego prognozy są średnio bliższe rzeczywistym wartościom.")
+
+    st.subheader("Uwaga na Overfitting (Przeuczenie)")
+    st.warning(
+        """
+        **Czym jest Overfitting?**
+        Przeuczenie (overfitting) ma miejsce, gdy model jest zbyt skomplikowany i "uczy się na pamięć" danych treningowych, w tym szumu, zamiast wychwytywać ogólny trend. Taki model będzie miał świetne wyniki na danych, na których trenował, ale fatalne na nowych, nieznanych danych.
+
+        **Jak to się ma do nas?**
+        Modele, których tu użyliśmy (liniowy i logarytmiczny z jedną zmienną), są modelami **bardzo prostymi**. Ryzyko przeuczenia jest tu **minimalne**. 
+        
+        Dużo większym ryzykiem jest **underfitting** (niedouczenie), czyli sytuacja, w której model jest zbyt prosty, aby uchwycić prawdziwą zależność w danych (np. próba dopasowania linii prostej do danych, które układają się w parabolę).
+
+        **Jak rzetelnie ocenić model?**
+        W prawdziwej analizie predykcyjnej, dane dzieli się na **zbiór treningowy** (do nauki modelu) i **zbiór testowy** (do jego oceny). Model ocenia się na podstawie jego wyników (np. R² lub MSE) na zbiorze testowym. W tym module, dla celów demonstracyjnych, dopasowujemy model do wszystkich dostępnych danych.
+        """
+    )
+```
 
 -----
 
-## II. Testy Zależności (Korelacji i Asocjacji)
+## 📍 Integracja z modułem "Baza Wiedzy"
 
-Służą do sprawdzania, czy dwie zmienne są ze sobą powiązane (czy zmiana w jednej wiąże się ze zmianą w drugiej).
+Agencie, poniższy tekst w formacie Markdown powinien zostać dodany jako nowa strona lub sekcja w istniejącym module "Baza Wiedzy".
 
-### 6\. Współczynnik Korelacji Pearsona (r)
+**Instrukcja dla agenta:**
 
-  * **Cel:** 📈 Mierzy siłę i kierunek **liniowej** zależności między **dwoma zmiennymi numerycznymi**.
-  * **Scenariusz aplikacji:** 🔢 Użytkownik wybrał **2 kolumny numeryczne** (np. 'Wzrost' i 'Waga').
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Normalność:** Obie zmienne numeryczne mają rozkład normalny (Test Shapiro-Wilka, p \> 0.05 dla obu).
-    2.  **Liniowość:** Zależność między zmiennymi jest (wizualnie) liniowa (trudne do automatyzacji, ale normalność jest silną wskazówką).
-  * **Hipotezy (do raportu):**
-      * **H0:** Nie ma liniowej korelacji między zmienną X a zmienną Y (współczynnik korelacji = 0).
-      * **H1:** Istnieje liniowa korelacja między zmienną X a zmienną Y (współczynnik korelacji \!= 0).
-  * **Implementacja (Python):** 🐍
-    ```python
-    # x, y = dwie kolumny danych z Pandasa
-    from scipy.stats import pearsonr
-    correlation_coefficient, p_value = pearsonr(x, y)
-    ```
-
-### 7\. Współczynnik Korelacji rang Spearmana (rho)
-
-  * **Cel:** 📉 Mierzy siłę i kierunek **monotonicznej** zależności między dwoma zmiennymi (mogą być numeryczne lub porządkowe).
-  * **Scenariusz aplikacji:** 🔢 Użytkownik wybrał **2 kolumny numeryczne**.
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Brak normalności:** Co najmniej jedna ze zmiennych **nie ma** rozkładu normalnego (Test Shapiro-Wilka, p \<= 0.05).
-    2.  **Zależność nieliniowa:** Używany, gdy zależność nie jest liniowa, ale jest monotoniczna (jedna zmienna rośnie, gdy druga rośnie/maleje, ale niekoniecznie w stałym tempie).
-  * **Hipotezy (do raportu):**
-      * **H0:** Nie ma monotonicznej korelacji między zmienną X a zmienną Y.
-      * **H1:** Istnieje monotoniczna korelacja między zmienną X a zmienną Y.
-  * **Implementacja (Python):** 🐍
-    ```python
-    from scipy.stats import spearmanr
-    correlation_coefficient, p_value = spearmanr(x, y)
-    ```
-
-### 8\. Test Chi-kwadrat (χ²) Niezależności
-
-  * **Cel:** 📊 Sprawdza, czy istnieje **związek (asocjacja)** między **dwoma zmiennymi kategorycznymi**.
-  * **Scenariusz aplikacji:** 🔠 Użytkownik wybrał **2 kolumny kategoryczne** (np. 'Płeć' i 'Wykształcenie').
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Wielkość próby:** Wartości oczekiwane w każdej komórce tabeli kontyngencji (krzyżowej) są odpowiednio duże (zwykle \> 5).
-  * **Hipotezy (do raportu):**
-      * **H0:** Zmienna A i zmienna B są od siebie **niezależne** (nie ma między nimi związku).
-      * **H1:** Zmienna A i zmienna B są od siebie **zależne** (istnieje między nimi związek).
-  * **Implementacja (Python):** 🐍
-    ```python
-    import pandas as pd
-    from scipy.stats import chi2_contingency
-    contingency_table = pd.crosstab(df['cat_var_1'], df['cat_var_2'])
-    chi2_stat, p_value, dof, expected_freqs = chi2_contingency(contingency_table)
-    ```
-
-### 9\. Dokładny Test Fishera (Fisher's Exact Test)
-
-  * **Cel:** 📊 Alternatywa dla testu Chi-kwadrat, używana gdy założenie o wielkości próby nie jest spełnione. Szczególnie dla małych próbek i tabel 2x2.
-  * **Scenariusz aplikacji:** 🔠 Użytkownik wybrał **2 kolumny kategoryczne** (zwłaszcza 2x2, np. 'Palący: Tak/Nie' vs 'Choroba: Tak/Nie').
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Mała próba:** Używany, gdy test Chi-kwadrat jest nieodpowiedni, ponieważ **wartości oczekiwane w komórkach są zbyt małe** (np. \< 5).
-  * **Hipotezy (do raportu):**
-      * **H0:** Zmienna A i zmienna B są od siebie **niezależne**.
-      * **H1:** Zmienna A i zmienna B są od siebie **zależne**.
-  * **Implementacja (Python):** 🐍
-    ```python
-    from scipy.stats import fisher_exact
-    # Działa tylko dla tabel 2x2
-    odds_ratio, p_value = fisher_exact(table_2x2)
-    ```
+1.  Zlokalizuj plik(i) Pythona odpowiedzialne za moduł "Baza Wiedzy" (np. `knowledge_base.py` lub główny plik `app.py`, gdzie zdefiniowana jest nawigacja).
+2.  Utwórz nową funkcję, np. `def show_regression_docs():`.
+3.  Wklej poniższą treść (całą sekcję "Treść dla modułu Baza Wiedzy") do tej funkcji, używając `st.markdown()`. Upewnij się, że renderowanie LaTeX (dla wzorów) jest włączone (Streamlit domyślnie to obsługuje).
+4.  Dodaj w menu nawigacyjnym "Bazy Wiedzy" odnośnik (np. w `st.selectbox` lub `st.sidebar`) prowadzący do funkcji `show_regression_docs()`.
 
 -----
 
-## III. Testy dla Danych Sparowanych (Zależnych)
+## 📖 Treść dla modułu "Baza Wiedzy"
 
-Służą do porównywania dwóch pomiarów wykonanych na tej samej grupie (np. "przed" i "po").
+(Początek treści do skopiowania)
 
-### 10\. Test t dla prób zależnych (Paired T-test)
+## 📈 Analiza Regresji: Liniowa i Logarytmiczna
 
-  * **Cel:** 🔬 Porównuje **średnie** dwóch **powiązanych** ze sobą pomiarów (np. wynik tego samego pacjenta przed leczeniem i po leczeniu).
-  * **Scenariusz aplikacji:** 🔁 Użytkownik wybrał **2 kolumny numeryczne** I dodatkowo zaznaczył opcję **"Dane są sparowane"**.
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Normalność różnic:** **Różnice** między parami pomiarów (np. `po - przed`) mają rozkład normalny (Test Shapiro-Wilka na kolumnie różnic, p \> 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Średnia różnica między pomiarem 1 a pomiarem 2 wynosi zero (nie ma zmiany).
-      * **H1:** Średnia różnica między pomiarami jest różna od zera (nastąpiła zmiana).
-  * **Implementacja (Python):** 🐍
-    ```python
-    # data_before, data_after = dwie sparowane kolumny
-    from scipy.stats import ttest_rel
-    stat, p_value = ttest_rel(data_before, data_after)
-    ```
+Analiza regresji to jedna z fundamentalnych technik statystycznych. Jej celem jest **modelowanie zależności** między zmiennymi. Najczęściej chcemy zrozumieć, jak jedna zmienna (zależna, $Y$) zmienia się, gdy zmienia się inna zmienna (niezależna, $X$).
 
-### 11\. Test rang Wilcoxona (Wilcoxon Signed-Rank Test)
+### Czym jest Regresja Liniowa?
 
-  * **Cel:** 🔬 **Nieparametryczny** odpowiednik testu t dla prób zależnych. Porównuje **mediany** dwóch **powiązanych** pomiarów.
-  * **Scenariusz aplikacji:** 🔁 Użytkownik wybrał **2 kolumny numeryczne** I zaznaczył opcję **"Dane są sparowane"**.
-  * **Kluczowe założenia (do sprawdzenia):**
-    1.  **Brak normalności różnic:** **Różnice** między parami pomiarów **nie mają** rozkładu normalnego (Test Shapiro-Wilka na kolumnie różnic, p \<= 0.05).
-  * **Hipotezy (do raportu):**
-      * **H0:** Mediana różnic między pomiarem 1 a pomiarem 2 wynosi zero (nie ma zmiany).
-      * **H1:** Mediana różnic między pomiarami jest różna od zera (nastąpiła zmiana).
-  * **Implementacja (Python):** 🐍
-    ```python
-    from scipy.stats import wilcoxon
-    stat, p_value = wilcoxon(data_before, data_after)
-    ```
+Regresja liniowa jest najprostszym typem regresji. Zakłada ona, że zależność między zmienną $X$ a $Y$ można opisać za pomocą **linii prostej**.
 
+#### Wzór
 
-Rozumiem. Chcesz włączyć **automatyczne generowanie wizualizacji i statystyk opisowych (deskryptywnych)** bezpośrednio po wyborze kolumn, jeszcze zanim użytkownik podejmie decyzję o wykonaniu właściwego testu statystycznego.
+Model opisany jest prostym równaniem:
 
-Poniższy plan rozszerza poprzednie kroki (zwłaszcza **Krok 5** i **Krok 6**) o moduł eksploracji danych.
+$$
+y = ax + b
+$$Gdzie:
 
----
+* **$y$** – Wartość prognozowana (zmienna zależna).
+* **$x$** – Wartość zmiennej niezależnej.
+* **$a$** – **Współczynnik nachylenia** (slope). Mówi nam, o ile *średnio* zmieni się $y$, jeśli $x$ wzrośnie o jedną jednostkę.
+* **$b$** – **Wyraz wolny** (intercept). Jest to punkt przecięcia linii z osią $Y$, czyli wartość $y$, gdy $x$ wynosi 0.
 
-## 🚀 Zaktualizowany Plan Implementacji: Włączanie Wizualizacji i Statystyk Opisowych
+#### Jak się ją liczy?
 
-### Zmodyfikowany Przepływ Aplikacji:
+Najpopularniejszą metodą jest **Metoda Najmniejszych Kwadratów (Ordinary Least Squares - OLS)**. Komputer szuka takiej linii (czyli takich wartości $a$ i $b$), która minimalizuje sumę kwadratów odległości (tzw. "błędów" lub "rezyduów") między rzeczywistymi punktami danych a linią regresji.
 
-1.  Wgranie i ładowanie danych.
-2.  Wybór kolumn.
-3.  **(NOWOŚĆ): Wyświetlenie statystyk opisowych i automatycznie wygenerowanych wykresów.**
-4.  Sprawdzenie założeń testu i rekomendacja.
-5.  Wykonanie testu statystycznego.
+#### Kiedy jej używać?
 
----
+* Gdy na wykresie punktowym dane wydają się układać wzdłuż linii prostej.
+* Gdy zakładamy stałe tempo zmiany (np. koszt wyprodukowania 10 sztuk jest 10 razy większy niż 1 sztuki).
+* Jako model bazowy do porównania z bardziej skomplikowanymi modelami.
 
-### Krok 5 (Zmieniony): UI do Wyboru Kolumn i Wyświetlania Danych Opisowych
+-----
 
-**Cel:** Umożliwienie wyboru kolumn i natychmiastowe wygenerowanie statystyk deskryptywnych oraz wykresów.
+### Czym jest Regresja Logarytmiczna?
 
-| Czynność | Opis dla Agenta | Elementy Kodowania |
-| :--- | :--- | :--- |
-| **A. Wybór Kolumn (UI)** | Po wgraniu danych (Krok 4), wyświetl `st.multiselect` dla kolumn. Wybór ten wyzwala analizę deskryptywną. | `st.multiselect("Wybierz kolumny...", key='selected_columns', on_change=clear_analysis_results)` |
-| **B. Wywołanie Analizy** | Gdy `len(selected_columns) > 0`, wywołaj nową funkcję, która obliczy statystyki opisowe i wygeneruje wykresy. | `if len(st.session_state.get('selected_columns', [])) > 0: display_exploratory_data(df, selected_columns)` |
-| **C. Funkcja Deskryptywna (Backend)** | Stwórz funkcję `def get_descriptive_stats(df, col):`. Powinna ona zwracać słownik lub DataFrame z kluczowymi miarami. | Użyj **Pandas**: `df[col].describe()`. Dodatkowo oblicz modę (`df[col].mode()`), zakres interkwartylowy (IQR), oraz wariancję (`df[col].var()`). |
-| **D. Zapis i Wyświetlanie** | Zapisz statystyki deskryptywne w `st.session_state` (np. `'descriptive_stats'`). Wyświetl je w formie czytelnej tabeli dla każdej wybranej kolumny. | `st.subheader("Statystyki Opisowe")`; `st.dataframe(...)` |
+Regresja logarytmiczna jest modelem krzywoliniowym. Jest idealna do opisywania sytuacji, w których zależność **szybko rośnie na początku, a następnie zwalnia** (lub nasyca się).
 
----
+#### Wzór
 
-### Krok 6 (Nowy): Automatyczne Generowanie Wykresów
+Model opisany jest równaniem:
 
-**Cel:** Automatyczne generowanie **najbardziej informatywnych wykresów** (wykresy rozkładu) w zależności od typu wybranej kolumny, aby użytkownik mógł wizualnie ocenić rozkład (kluczowe założenie testów parametrycznych).
+$$y = a \\cdot \\ln(x) + b
+$$Gdzie:
 
-| Typ Danych | Sugerowany Wykres | Cel | Implementacja (Biblioteki) |
-| :--- | :--- | :--- | :--- |
-| **Numeryczne** (pojedyncza kolumna) | **Histogram** (z funkcją gęstości/KDE) | Wizualizacja rozkładu danych i **normalności** (sprawdzenie, czy jest to dzwon). | `plotly.express` (`px.histogram`) LUB `seaborn` (`sns.histplot`) |
-| **Numeryczne** (dla każdej grupy) | **Wykres pudełkowy (Box Plot)** | Porównanie median, kwartyli, zakresu oraz **odchyleń i symetrii** między grupami kategorycznymi. | `plotly.express` (`px.box`) LUB `seaborn` (`sns.boxplot`) |
-| **Kategoryczne** (pojedyncza kolumna) | **Wykres słupkowy (Bar Chart)** | Pokazanie częstości występowania każdej kategorii. | `plotly.express` (`px.bar`) |
-| **2 Numeryczne** (dla korelacji) | **Wykres punktowy (Scatter Plot)** | Wizualizacja **liniowości** lub **monotoniczności** zależności. | `plotly.express` (`px.scatter`) |
+  * **$y$**, **$a$**, **$b$** – Mają podobne znaczenie jak w regresji liniowej.
+  * **$\ln(x)$** – **Logarytm naturalny** ze zmiennej $x$.
 
-**Szczegółowy Opis dla Agenta (Logika generowania wykresów):**
+**Ważna uwaga:** Model ten można stosować tylko wtedy, gdy wartości zmiennej niezależnej $X$ są **dodatnie** ($x > 0$), ponieważ logarytm z zera lub liczb ujemnych jest niezdefiniowany.
 
-1.  Stwórz funkcję `def generate_plots(df, selected_cols):`.
-2.  **Logika:** Sprawdź, ile kolumn wybrano:
-    * **Jedna kolumna numeryczna:** Wygeneruj **Histogram** dla tej kolumny.
-    * **Jedna kolumna kategoryczna i jedna numeryczna:** Wygeneruj **Box Plot** (zmienna numeryczna na osi Y, kategoryczna na osi X). Użyj `plotly.express` dla interaktywności.
-    * **Dwie kolumny numeryczne:** Wygeneruj **Scatter Plot**.
-    * **Dwie kolumny kategoryczne:** Wygeneruj **Mozaikowy wykres słupkowy** (częstości).
-3.  Wyświetl wygenerowane wykresy za pomocą `st.plotly_chart()` (wymaga `plotly` w `requirements.txt`).
+#### Jak się ją liczy?
 
----
+Najczęściej sprowadza się to do prostego triku:
 
-### Krok 7 (Zmieniony): Sprawdzanie Założeń i Rekomendacja Testu
+1.  Tworzymy nową zmienną, $X' = \ln(X)$.
+2.  Wykonujemy **regresję liniową** na danych $(X', Y)$.
+    Model, który otrzymujemy, to $y = a \cdot X' + b$, co po podstawieniu $X'$ daje nam $y = a \cdot \ln(x) + b$.
 
-**Cel:** Uruchomienie logiki sprawdzania założeń *po* wyświetleniu wizualizacji, kończąc przyciskiem do wykonania testu.
+#### Kiedy jej używać?
 
-| Czynność | Opis dla Agenta | Elementy Kodowania |
-| :--- | :--- | :--- |
-| **A. Wyświetlanie założeń** | Wyświetl podsumowanie sprawdzenia założeń (normalność, Levene'a) w `st.expander`, aby użytkownik mógł je przejrzeć. | Wykorzystaj słownik `'assumptions'` zapisany w stanie sesji. |
-| **B. Rekomendacja Testu** | Wyświetl nazwę rekomendowanego testu (`'recommendation'`). | `st.success(...)` |
-| **C. Oczekiwanie na Wykonanie (UI)** | **Usuń** automatyczne wykonywanie analizy. Wprowadź jeden wyraźny przycisk. | `st.button("Wykonaj Analizę Statystyczną i Raport", key='run_test_final', type="primary")` |
-| **D. Flaga Wykonania** | Kliknięcie przycisku ustawia flagę w stanie sesji na `True`, co wyzwala Krok 8 (wcześniej Krok 9). | `if st.button(...): st.session_state['run_analysis_flag'] = True` |
+  * Gdy obserwujemy **prawo malejących przychodów**. Na przykład:
+      * Wpływ wydatków na reklamę na sprzedaż (pierwsza wydana złotówka przynosi duży zwrot, ale milionowa już znacznie mniejszy).
+      * Wpływ liczby godzin nauki na wynik egzaminu (przejście z 0 na 2 godziny daje duży skok; przejście z 10 na 12 godzin – niewielki).
+  * Gdy tempo wzrostu $Y$ maleje wraz ze wzrostem $X$.
 
----
+-----
 
-### Krok 8: Router Funkcji Statystycznych i Raport
+### Jak ocenić, który model jest lepszy?
 
-**Cel:** Ten krok pozostaje niezmieniony, ale jest wyzwalany przez **przygotowany przycisk** (Krok 7C), a nie automatycznie.
+Po dopasowaniu obu modeli do tych samych danych, musimy zdecydować, który z nich jest lepszy. Używamy do tego dwóch kluczowych metryk:
 
-1.  Logika sprawdza flagę `'run_analysis_flag'`.
-2.  Wywołuje router `run_statistical_test(df, cols, rec_key)`.
-3.  Zapisuje wyniki do `'results'`.
-4.  Wyświetla pełny raport (hipotezy, p-wartość, interpretacja).
+#### 1\. R-kwadrat (R²) – Współczynnik Determinacji
 
----
+  * **Co mierzy:** Jak dobrze model (linia lub krzywa) **wyjaśnia zmienność** w danych.
+  * **Interpretacja:** Jest to wartość od 0 do 1 (lub 0% do 100%).
+      * R² = 0.85 oznacza, że 85% zmienności w $Y$ jest wyjaśniane przez zmienną $X$ za pomocą naszego modelu.
+  * **Wybór:** **Im wyższy R², tym (zazwyczaj) lepszy model.** Lepsze dopasowanie do danych.
 
-### Podsumowanie Zmian dla Agenta
+#### 2\. Błąd Średniokwadratowy (Mean Squared Error - MSE)
 
-| Sekcja Planu | Zmiana | Kluczowe Wyzwanie |
-| :--- | :--- | :--- |
-| **Krok 5 (UI)** | Dodanie logiki wywołującej statystyki opisowe. | Wdrożenie logiki **Pandas** (`.describe()`, `.var()`, `.mode()`) i wyświetlanie ich w `st.dataframe`. |
-| **Krok 6 (Nowy)** | Wprowadzenie modułu **Automatycznej Wizualizacji** (Histogramy, Box Ploty, Scatter Ploty). | Poprawne użycie `plotly.express` lub `seaborn` i **dynamiczne** generowanie wykresów w zależności od **typu i liczby** wybranych kolumn. |
-| **Krok 7 (UI/Flow)** | Usunięcie automatycznego wykonania analizy na rzecz **jednego przycisku** do wygenerowania raportu po wizualnej ocenie danych. | Zapewnienie, że wszystkie dane opisowe i wykresy są widoczne *przed* tym przyciskiem. |
+  * **Co mierzy:** Średnią kwadratów błędów (różnic między wartością rzeczywistą $y$ a prognozowaną $\hat{y}$).
+  * **Interpretacja:** Jest to miara błędu prognozy. Ponieważ błędy są podnoszone do kwadratu, metryka ta bardzo **mocno "karze" duże błędy**.
+  * **Wybór:** **Im niższy MSE, tym lepszy model.** Oznacza to, że prognozy modelu są średnio bliższe prawdy.
+
+#### Wnioskowanie:
+
+Najczęściej szukamy modelu, który ma **jednocześnie wysoki R² i niski MSE**.
+
+### Problem Overfittingu (Przeuczenia)
+
+Overfitting to jeden z największych problemów w modelowaniu.
+
+  * **Definicja:** Zjawisko, w którym model jest **zbyt skomplikowany** i zamiast uczyć się ogólnego trendu w danych, zaczyna "wkuwać na pamięć" dane treningowe, łącznie z przypadkowym szumem.
+  * **Skutek:** Taki model ma fantastyczne metryki (np. R² bliskie 1.0) na danych, na których był uczony, ale kompletnie nie potrafi przewidywać nowych, nieznanych mu danych.
+  * **Jak się chronić:** W przypadku prostych modeli (jak regresja liniowa czy logarytmiczna z jedną zmienną) ryzyko jest bardzo małe. Problem pojawia się przy modelach bardzo złożonych (np. wielomiany wysokiego stopnia, głębokie sieci neuronowe).
+  * **Podstawowa zasada:** Zawsze należy dążyć do modelu **możliwie najprostszego**, który wciąż dobrze wyjaśnia dane (tzw. "Zasada Oszczędności" lub "Brzytwa Ockhama").
+
+(Koniec treści do skopiowania)
