@@ -26,6 +26,7 @@ from modules.power_analysis import PowerAnalysis
 from modules.report_generator import ReportGenerator
 from modules.post_hoc_tests import PostHocTests
 from modules.regression_module import run_regression_module
+from modules.clustering_module import run_clustering_module
 import statistical_recommender
 
 # Configure Streamlit page
@@ -85,7 +86,7 @@ def main():
         "Choose a page:",
         ["Home", "Test Selection Wizard", "Data Upload & Analysis",
          "Automatic Test Recommender", "Advanced Analysis",
-         "Power Analysis", "Regression Analysis", "Educational Content", "Test Library"]
+         "Power Analysis", "Regression Analysis", "K-Means Clustering", "Educational Content", "Test Library"]
     )
 
     # Initialize session state
@@ -111,6 +112,8 @@ def main():
         show_power_analysis_page()
     elif page == "Regression Analysis":
         run_regression_module()
+    elif page == "K-Means Clustering":
+        run_clustering_module()
     elif page == "Educational Content":
         show_educational_content()
     elif page == "Test Library":
@@ -493,7 +496,8 @@ def show_educational_content():
             "Understanding P-values",
             "Effect Sizes and Practical Significance",
             "Common Statistical Mistakes",
-            "Regression Analysis: Linear and Logarithmic"
+            "Regression Analysis: Linear and Logarithmic",
+            "K-Means Clustering"
         ]
     )
 
@@ -503,6 +507,8 @@ def show_educational_content():
         show_hypothesis_content()
     elif topic == "Regression Analysis: Linear and Logarithmic":
         show_regression_content()
+    elif topic == "K-Means Clustering":
+        show_kmeans_content()
     else:
         st.write(f"Content for '{topic}' coming soon!")
 
@@ -695,6 +701,95 @@ def show_regression_content():
     * Zawsze należy rozważyć praktyczne znaczenie wyników, nie tylko statystyczne dopasowanie.
 
     **Zachęcamy do eksperymentowania z modułem Analizy Regresji, aby zobaczyć te koncepcje w praktyce!**
+    """)
+
+def show_kmeans_content():
+    """Show K-Means clustering educational content"""
+
+    st.markdown("""
+    ## 💠 Klastrowanie K-Means (Grupowanie Metodą K-Średnich)
+
+    K-Means to jeden z najpopularniejszych algorytmów **uczenia nienadzorowanego**. Jego celem jest automatyczne podzielenie zbioru danych na $K$ odrębnych grup (klastrów), gdzie punkty wewnątrz jednego klastra są do siebie jak najbardziej podobne, a punkty między różnymi klastrami – jak najmniej.
+
+    ### Jak Działa Algorytm K-Means?
+
+    Algorytm działa iteracyjnie, próbując znaleźć "środki" (centroidy) dla $K$ grup.
+
+    1.  **Krok 1: Wybór $K$**
+        Użytkownik musi na początku **zdecydować**, na ile grup ($K$) chce podzielić dane. (Patrz poniżej, jak wybrać $K$).
+    2.  **Krok 2: Inicjalizacja**
+        Algorytm losowo (lub "inteligentnie" dzięki metodzie `k-means++`) umieszcza $K$ centroidów (punktów centralnych) w przestrzeni danych.
+    3.  **Krok 3: Przypisanie**
+        Każdy punkt danych jest przypisywany do **najbliższego** mu centroidu (zazwyczaj na podstawie odległości euklidesowej).
+    4.  **Krok 4: Aktualizacja**
+        Po przypisaniu wszystkich punktów, centroidy są **przesuwane**. Nową lokalizacją każdego centroidu jest **średnia arytmetyczna** wszystkich punktów, które zostały do niego przypisane.
+    5.  **Krok 5: Powtórzenie**
+        Kroki 3 i 4 są powtarzane aż do **konwergencji** – czyli do momentu, gdy centroidy przestaną się znacząco przemieszczać (klastry się ustabilizują).
+
+    ---
+
+    ### Metody Statystyczne: "Jak wybrać K?"
+
+    To największe wyzwanie w K-Means. Nie ma jednej "poprawnej" odpowiedzi, ale używamy metod statystycznych, aby oszacować dobrą wartość $K$.
+
+    #### 1. Metoda Łokcia (Elbow Method)
+
+      * **Co mierzy:** **Inercję (WCSS)**, czyli sumę kwadratów odległości każdego punktu od jego centroidu. Mówiąc prościej: jak bardzo "ścisłe" są klastry.
+      * **Jak to działa:** Uruchamiamy K-Means dla różnych wartości $K$ (np. od 2 do 10) i liczymy inercję dla każdej z nich.
+      * **Interpretacja:**
+          * Im więcej klastrów ($K$), tym mniejsza będzie inercja (bo klastry są mniejsze i ciaśniejsze).
+          * Rysujemy wykres $K$ vs. Inercja.
+          * Szukamy punktu **"załamania" (łokcia)** – miejsca, w którym linia przestaje gwałtownie opadać. Jest to punkt, w którym dodanie kolejnego klastra nie przynosi już dużej korzyści (nie zmniejsza znacząco inercji).
+
+    #### 2. Analiza Sylwetkowa (Silhouette Analysis)
+
+      * **Co mierzy:** **Współczynnik Sylwetkowy (Silhouette Score)**. Jest to miara bardziej zaawansowana, która ocenia dwie rzeczy jednocześnie:
+        1.  **Spójność (Cohesion):** Jak blisko punkty są do innych punktów w tym samym klastrze?
+        2.  **Separację (Separation):** Jak daleko punkty są od punktów w *innych* klastrach?
+      * **Jak to działa:** Wynik jest obliczany dla każdego punktu i mieści się w zakresie od -1 do 1.
+          * **+1:** Idealnie. Punkt jest daleko od sąsiednich klastrów i blisko swoich.
+          * **0:** Punkt jest na granicy dwóch klastrów (nakładanie się).
+          * **-1:** Źle. Punkt jest prawdopodobnie przypisany do złego klastra.
+      * **Interpretacja:**
+          * Uruchamiamy K-Means dla różnych $K$ i liczymy *średni* Współczynnik Sylwetkowy dla wszystkich punktów.
+          * Rysujemy wykres $K$ vs. Średni Silhouette Score.
+          * W przeciwieństwie do Metody Łokcia, tutaj **szukamy maksimum (szczytu)**. Najwyższy wynik wskazuje na $K$, które daje najbardziej spójne i najlepiej odseparowane klastry.
+
+    ---
+
+    ### Inne "Metody" i Wymagania K-Means
+
+    Aby K-Means zadziałało poprawnie, nie wystarczy tylko wybrać $K$. Kluczowe są też poniższe "metody" (techniki).
+
+    #### 1. Metoda: Standaryzacja Danych
+
+      * **Problem:** Algorytm K-Means opiera się na **odległości**. Jeśli masz cechy o różnych skalach (np. `Wiek` [0-100] i `Zarobki` [3 000 - 50 000]), cecha o większej skali (`Zarobki`) całkowicie zdominuje obliczenia odległości. Algorytm praktycznie zignoruje `Wiek`.
+      * **Rozwiązanie (Metoda):** **Standaryzacja** (np. `StandardScaler` w Scikit-learn).
+      * **Co robi:** Przekształca wszystkie cechy tak, aby miały średnią równą 0 i odchylenie standardowe równe 1. To sprawia, że każda cecha ma "równą wagę" w algorytmie.
+      * **Wniosek:** **Prawie zawsze powinieneś standaryzować dane przed użyciem K-Means.**
+
+    #### 2. Metoda: Inicjalizacja (Problem Lokalne Minimum)
+
+      * **Problem:** Wynik K-Means może zależeć od tego, gdzie **na początku** zostały umieszczone centroidy (Krok 2). Zły początkowy wybór może uwięzić algorytm w "lokalnym minimum" – znajdzie on klastry, ale nie będą one optymalne.
+      * **Rozwiązanie (Metoda 1): `n_init`**
+          * Uruchamiamy algorytm K-Means **wiele razy** (np. `n_init=10`) z różnymi losowymi punktami startowymi.
+          * Jako ostateczny wynik wybierany jest ten przebieg, który dał najniższą inercję (WCSS).
+      * **Rozwiązanie (Metoda 2): `init='k-means++'`**
+          * To domyślna metoda inicjalizacji w Scikit-learn.
+          * Zamiast umieszczać centroidy w pełni losowo, `k-means++` robi to "inteligentnie" – stara się umieścić początkowe centroidy daleko od siebie. Znacząco zwiększa to szansę na znalezienie optymalnych klastrów i przyspiesza konwergencję.
+
+    ---
+
+    ### 💡 Podsumowanie
+
+    * **K-Means** to algorytm uczenia nienadzorowanego do grupowania danych w klastry.
+    * Wymaga wybrania liczby klastrów **K** z góry.
+    * **Metoda Łokcia** pomaga znaleźć K poprzez identyfikację punktu, w którym dodanie kolejnego klastra nie przynosi znaczącej redukcji inercji.
+    * **Analiza Sylwetkowa** mierzy jakość klastrów (spójność i separację) – szukamy K z najwyższym wynikiem.
+    * **Standaryzacja danych** jest kluczowa, aby zapewnić równą wagę wszystkim cechom.
+    * Używamy **k-means++** i **n_init** aby uniknąć lokalnych minimów i znaleźć optymalne rozwiązanie.
+
+    **Zachęcamy do eksperymentowania z modułem Klastrowania K-Means, aby zobaczyć te koncepcje w praktyce!**
     """)
 
 def show_test_library():
