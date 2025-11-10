@@ -1,16 +1,16 @@
-Jasne, oto kompleksowy plan dla agenta kodującego oraz treść merytoryczna do modułu "Baza Wiedzy".
+Jasne, oto plan dla agenta kodującego oraz treść merytoryczna do modułu "Baza Wiedzy" dotycząca K-Means Clustering.
+
+Terminologia "wszystkie możliwe rozwiązania" w kontekście K-Means nie oznacza nieskończonych możliwości, ale odnosi się do **metod znajdowania optymalnej liczby klastrów (K)** oraz **kluczowych technik przygotowania danych i inicjalizacji**, które są niezbędne, aby algorytm zadziałał poprawnie. Moduł skupi się na dostarczeniu narzędzi do oceny różnych wartości 'K' (Metoda Łokcia, Analiza Sylwetkowa) oraz na prawidłowym uruchomieniu algorytmu.
 
 -----
 
-## 🚀 Plan dla Agenta: Budowa Modułu Regresji
+## 🚀 Plan dla Agenta: Budowa Modułu K-Means Clustering
 
-Oto szczegółowy plan krok po kroku, jak zaimplementować moduł analizy regresji w aplikacji Streamlit.
-
-**Cel:** Stworzenie nowej "strony" (modułu) w aplikacji, która pozwala użytkownikowi na wgranie danych (lub użycie demo), wybranie zmiennych, a następnie przeprowadzenie i porównanie regresji liniowej i logarytmicznej.
+**Cel:** Stworzenie modułu, który pozwala na wgranie danych, przeskalowanie ich, analizę optymalnej liczby klastrów (K) przy użyciu Metody Łokcia i Analizy Sylwetkowej, a następnie uruchomienie algorytmu K-Means i wizualizację wyników.
 
 ### 1\. Struktura Pliku i Importy
 
-Zalecam utworzenie nowego pliku, np. `regression_module.py`.
+Sugerowany plik: `clustering_module.py`.
 
 **Wymagane biblioteki:**
 
@@ -18,59 +18,51 @@ Zalecam utworzenie nowego pliku, np. `regression_module.py`.
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+from sklearn.datasets import make_blobs # Do danych demo
 import plotly.express as px
 import plotly.graph_objects as go
 ```
 
 ### 2\. Główna Funkcja Modułu
 
-Stwórz główną funkcję, która będzie wywoływana przez główną nawigację aplikacji.
-
 ```python
-def run_regression_module():
-    st.title("📈 Moduł Analizy Regresji")
-    st.markdown("Analizuj i porównuj modele regresji liniowej i logarytmicznej.")
+def run_clustering_module():
+    st.title("💠 Moduł Klastrowania K-Means")
+    st.markdown("Grupuj dane i odkrywaj ukryte struktury za pomocą algorytmu K-Means.")
     
-    # Krok 1: Wprowadzenie Danych
-    # Krok 2: Wybór Zmiennych
-    # Krok 3: Analiza i Wizualizacja
+    # Krok 1: Wprowadzenie Danych (z Demo)
+    # Krok 2: Konfiguracja Modelu (Wybór cech, Skalowanie)
+    # Krok 3: Znajdowanie Optymalnego 'K' (Metody analityczne)
+    # Krok 4: Uruchomienie Modelu i Wizualizacja
 ```
 
-### 3\. Krok 1: Wprowadzenie Danych (z Demo)
+### 3\. Krok 1: Wprowadzenie Danych
 
-Użyj `st.sidebar` lub `st.tabs` do wyboru źródła danych.
+Logika identyczna jak w module regresji, ale z nowymi danymi demo.
 
 ```python
     # === SEKCJA 1: ŹRÓDŁO DANYCH ===
     st.sidebar.header("1. Wprowadź Dane")
     data_source = st.sidebar.radio(
         "Wybierz źródło danych:",
-        ("Użyj danych demo", "Wprowadź własne dane")
+        ("Użyj danych demo (3 klastry)", "Wprowadź własne dane")
     )
     
-    df = None # Inicjalizacja DataFrame
+    df = None 
 
-    # --- Dane Demo ---
-    def get_demo_data_linear():
-        X = np.linspace(1, 50, 100)
-        y = 2.5 * X + 4 + np.random.randn(100) * 8 # Silna korelacja liniowa + szum
-        return pd.DataFrame({'X_lin': X, 'Y_lin': y})
+    def get_demo_data_clustering():
+        # Generuj dane z wyraźnymi grupami
+        X, y = make_blobs(n_samples=300, centers=3, n_features=2, 
+                          cluster_std=1.0, random_state=42)
+        demo_df = pd.DataFrame(X, columns=['Cecha_1', 'Cecha_2'])
+        demo_df['Prawdziwy_Klaster'] = y # Do ewentualnej walidacji, choć model tego nie widzi
+        return demo_df
 
-    def get_demo_data_log():
-        X = np.linspace(1, 50, 100)
-        y = 3 * np.log(X) + 2 + np.random.randn(100) * 0.5 # Korelacja logarytmiczna + szum
-        return pd.DataFrame({'X_log': X, 'Y_log': y})
-
-    if data_source == "Użyj danych demo":
-        demo_type = st.sidebar.selectbox("Wybierz typ danych demo:", ["Dane Liniowe", "Dane Logarytmiczne"])
-        if demo_type == "Dane Liniowe":
-            df = get_demo_data_linear()
-        else:
-            df = get_demo_data_log()
-
-    # --- Własne Dane ---
+    if data_source == "Użyj danych demo (3 klastry)":
+        df = get_demo_data_clustering()
     else:
         uploaded_file = st.sidebar.file_uploader("Wgraj plik CSV lub Excel", type=["csv", "xlsx"])
         if uploaded_file:
@@ -82,7 +74,6 @@ Użyj `st.sidebar` lub `st.tabs` do wyboru źródła danych.
             except Exception as e:
                 st.error(f"Błąd podczas wczytywania pliku: {e}")
 
-    # Jeśli dane nie są wczytane, zakończ działanie modułu w tym miejscu
     if df is None or df.empty:
         st.info("Proszę wczytać dane lub wybrać zestaw demo, aby rozpocząć analizę.")
         st.stop()
@@ -91,152 +82,191 @@ Użyj `st.sidebar` lub `st.tabs` do wyboru źródła danych.
     st.dataframe(df.head())
 ```
 
-### 4\. Krok 2: Wybór Zmiennych
+### 4\. Krok 2: Konfiguracja Modelu
 
-Pozwól użytkownikowi wybrać, które kolumny to X i Y.
+To jest kluczowy etap: wybór cech i **skalowanie**.
 
 ```python
-    # === SEKCJA 2: WYBÓR ZMIENNYCH ===
+    # === SEKCJA 2: KONFIGURACJA MODELU ===
     st.sidebar.header("2. Konfiguracja Modelu")
     
-    # Wybierz tylko kolumny numeryczne
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
     
-    if len(numeric_cols) < 2:
-        st.warning("Twoje dane muszą zawierać co najmniej dwie kolumny numeryczne.")
+    # Usuń kolumnę 'Prawdziwy_Klaster' z danych demo, jeśli tam jest
+    if 'Prawdziwy_Klaster' in numeric_cols:
+        numeric_cols.remove('Prawdziwy_Klaster')
+
+    if len(numeric_cols) == 0:
+        st.warning("Twoje dane muszą zawierać kolumny numeryczne.")
         st.stop()
 
-    col_x = st.sidebar.selectbox("Wybierz zmienną niezależną (X):", numeric_cols)
-    # Usuń wybraną kolumnę X z listy dostępnych dla Y
-    available_y_cols = [col for col in numeric_cols if col != col_x]
-    col_y = st.sidebar.selectbox("Wybierz zmienną zależną (Y):", available_y_cols)
-```
+    selected_features = st.sidebar.multiselect(
+        "Wybierz cechy (zmienne) do klastrowania:",
+        numeric_cols,
+        default=numeric_cols[0:min(len(numeric_cols), 2)] # Domyślnie wybierz pierwsze dwie
+    )
 
-### 5\. Krok 3: Analiza i Wizualizacja
+    if len(selected_features) == 0:
+        st.warning("Proszę wybrać co najmniej jedną cechę do analizy.")
+        st.stop()
 
-To jest rdzeń modułu. Przeprowadź obliczenia i wyświetl wyniki.
-
-```python
-    # === SEKCJA 3: ANALIZA I WYNIKI ===
+    # --- Metoda: Standaryzacja Danych ---
+    do_scale = st.sidebar.checkbox(
+        "Standaryzuj dane (Zalecane!)", 
+        value=True,
+        help="K-Means jest wrażliwy na skalę danych (np. 'Wiek' vs 'Zarobki'). Standaryzacja (X-średnia)/odch. std. sprawia, że wszystkie cechy mają równą wagę."
+    )
     
-    # Przygotowanie danych (usuwanie braków danych)
-    analysis_df = df[[col_x, col_y]].dropna()
-    X_raw = analysis_df[[col_x]]
-    y = analysis_df[col_y]
-
-    if X_raw.empty or y.empty:
+    # Przygotowanie danych do analizy
+    X_raw = df[selected_features].dropna()
+    
+    if X_raw.empty:
         st.error("Wybrane kolumny nie zawierają danych po usunięciu braków (NaN).")
         st.stop()
-
-    st.header("Wyniki Analizy Regresji")
-    
-    # Użyj kolumn do prezentacji wyników
-    col1, col2 = st.columns(2)
-
-    # --- Model Liniowy ---
-    with col1:
-        st.subheader("Model Liniowy")
-        st.markdown("`y = a * x + b`")
         
-        model_lin = LinearRegression()
-        model_lin.fit(X_raw, y)
-        y_pred_lin = model_lin.predict(X_raw)
-        
-        a_lin = model_lin.coef_[0]
-        b_lin = model_lin.intercept_
-        r2_lin = r2_score(y, y_pred_lin)
-        mse_lin = mean_squared_error(y, y_pred_lin)
-        
-        st.metric("R-kwadrat (R²)", f"{r2_lin:.4f}")
-        st.metric("Błąd Średniokw. (MSE)", f"{mse_lin:.4f}")
-        st.write(f"**Wzór:** `y = {a_lin:.3f} * x + {b_lin:.3f}`")
-
-    # --- Model Logarytmiczny ---
-    with col2:
-        st.subheader("Model Logarytmiczny")
-        st.markdown("`y = a * ln(x) + b`")
-
-        # Model logarytmiczny wymaga X > 0
-        log_df = analysis_df[analysis_df[col_x] > 0]
-        if log_df.empty:
-            st.warning("Model logarytmiczny wymaga wartości X > 0. Brak danych do analizy.")
-            r2_log, mse_log, a_log, b_log = (np.nan,)*4 # Ustaw jako NaN
-        else:
-            X_log_transformed = np.log(log_df[[col_x]]) # Transformacja X -> ln(X)
-            y_log_target = log_df[col_y]
-            
-            model_log = LinearRegression()
-            model_log.fit(X_log_transformed, y_log_target)
-            y_pred_log = model_log.predict(X_log_transformed)
-            
-            a_log = model_log.coef_[0]
-            b_log = model_log.intercept_
-            r2_log = r2_score(y_log_target, y_pred_log)
-            mse_log = mean_squared_error(y_log_target, y_pred_log)
-
-            st.metric("R-kwadrat (R²)", f"{r2_log:.4f}")
-            st.metric("Błąd Średniokw. (MSE)", f"{mse_log:.4f}")
-            st.write(f"**Wzór:** `y = {a_log:.3f} * ln(x) + {b_log:.3f}`")
-            st.caption(f"Analiza przeprowadzona na {len(log_df)} wierszach (gdzie {col_x} > 0).")
-
-    # --- Wizualizacja ---
-    st.subheader("Wizualizacja Dopasowania")
-    
-    # Stwórz wykres punktowy
-    fig = px.scatter(analysis_df, x=col_x, y=col_y, title="Dopasowanie Modeli Regresji", labels={col_x: f"X: {col_x}", col_y: f"Y: {col_y}"})
-    
-    # Dodaj linię regresji liniowej
-    fig.add_trace(go.Scatter(x=X_raw[col_x], y=y_pred_lin, mode='lines', name=f"Liniowa (R²={r2_lin:.3f})", line=dict(color='red', width=3)))
-    
-    # Dodaj linię regresji logarytmicznej (jeśli obliczona)
-    if not np.isnan(r2_log):
-        # Sortuj wartości dla gładkiej linii
-        log_df_sorted = log_df.sort_values(by=col_x)
-        X_log_plot = np.log(log_df_sorted[[col_x]])
-        y_pred_log_plot = model_log.predict(X_log_plot)
-        
-        fig.add_trace(go.Scatter(x=log_df_sorted[col_x], y=y_pred_log_plot, mode='lines', name=f"Logarytm. (R²={r2_log:.3f})", line=dict(color='green', width=3)))
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # === SEKCJA 4: INTERPRETACJA I OVERFITTING ===
-    st.header("Wybór Modelu i Interpretacja")
-
-    # Porównanie
-    if np.isnan(r2_log) and not np.isnan(r2_lin):
-        st.info("Tylko model liniowy mógł zostać obliczony (model logarytmiczny wymaga X > 0).")
-    elif np.isnan(r2_lin) and np.isnan(r2_log):
-        st.error("Nie można było obliczyć żadnego modelu.")
+    X_scaled = X_raw.copy()
+    if do_scale:
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X_raw)
     else:
-        # Porównanie R²
-        if r2_lin > r2_log:
-            st.success(f"**Model Liniowy wydaje się lepiej dopasowany.** Posiada wyższy współczynnik R² ({r2_lin:.4f}) w porównaniu do modelu logarytmicznego ({r2_log:.4f}).")
-        elif r2_log > r2_lin:
-            st.success(f"**Model Logarytmiczny wydaje się lepiej dopasowany.** Posiada wyższy współczynnik R² ({r2_log:.4f}) w porównaniu do modelu liniowego ({r2_lin:.4f}).")
-        else:
-            st.info(f"Oba modele mają identyczny współczynnik R² ({r2_lin:.4f}).")
-            
-        # Porównanie MSE
-        if mse_lin < mse_log:
-            st.success(f"Model Liniowy ma również **mniejszy błąd średniokwadratowy (MSE)** ({mse_lin:.4f} vs {mse_log:.4f}), co oznacza, że jego prognozy są średnio bliższe rzeczywistym wartościom.")
-        elif mse_log < mse_lin:
-            st.success(f"Model Logarytmiczny ma również **mniejszy błąd średniokwadratowy (MSE)** ({mse_log:.4f} vs {mse_lin:.4f}), co oznacza, że jego prognozy są średnio bliższe rzeczywistym wartościom.")
+        X_scaled = X_raw.values # Użyj .values, aby mieć spójny typ (numpy array)
+```
 
-    st.subheader("Uwaga na Overfitting (Przeuczenie)")
-    st.warning(
-        """
-        **Czym jest Overfitting?**
-        Przeuczenie (overfitting) ma miejsce, gdy model jest zbyt skomplikowany i "uczy się na pamięć" danych treningowych, w tym szumu, zamiast wychwytywać ogólny trend. Taki model będzie miał świetne wyniki na danych, na których trenował, ale fatalne na nowych, nieznanych danych.
+### 5\. Krok 3: Znajdowanie Optymalnego 'K' (Metody)
 
-        **Jak to się ma do nas?**
-        Modele, których tu użyliśmy (liniowy i logarytmiczny z jedną zmienną), są modelami **bardzo prostymi**. Ryzyko przeuczenia jest tu **minimalne**. 
+Tutaj implementujemy "wszystkie sposoby" oceny K.
+
+```python
+    # === SEKCJA 3: ZNAJDOWANIE OPTYMALNEGO 'K' ===
+    st.header("Analiza Optymalnej Liczby Klastrów (K)")
+    st.markdown("""
+    Algorytm K-Means wymaga podania z góry liczby klastrów (K). Poniższe metody statystyczne pomogą Ci dokonać świadomego wyboru.
+    """)
+
+    max_k = st.sidebar.slider("Maksymalna liczba 'K' do analizy:", 2, 15, 10)
+    
+    # Przechowywanie wyników
+    inertia_values = [] # Dla Metody Łokcia
+    silhouette_values = [] # Dla Analizy Sylwetkowej
+    k_range = range(2, max_k + 1)
+
+    # Użyj paska postępu
+    progress_bar = st.progress(0, text="Analizowanie K...")
+    
+    for i, k in enumerate(k_range):
+        kmeans = KMeans(n_clusters=k, init='k-means++', n_init=10, random_state=42)
+        kmeans.fit(X_scaled)
         
-        Dużo większym ryzykiem jest **underfitting** (niedouczenie), czyli sytuacja, w której model jest zbyt prosty, aby uchwycić prawdziwą zależność w danych (np. próba dopasowania linii prostej do danych, które układają się w parabolę).
+        # Metoda Łokcia
+        inertia_values.append(kmeans.inertia_)
+        
+        # Metoda Sylwetkowa
+        score = silhouette_score(X_scaled, kmeans.labels_)
+        silhouette_values.append(score)
+        
+        progress_bar.progress((i + 1) / len(k_range), text=f"Analizowanie K={k}...")
+    progress_bar.empty()
 
-        **Jak rzetelnie ocenić model?**
-        W prawdziwej analizie predykcyjnej, dane dzieli się na **zbiór treningowy** (do nauki modelu) i **zbiór testowy** (do jego oceny). Model ocenia się na podstawie jego wyników (np. R² lub MSE) na zbiorze testowym. W tym module, dla celów demonstracyjnych, dopasowujemy model do wszystkich dostępnych danych.
-        """
+
+    # Wyświetlanie wyników w zakładkach
+    tab1, tab2 = st.tabs(["Metoda Łokcia (Inertia)", "Analiza Sylwetkowa (Silhouette Score)"])
+
+    with tab1:
+        st.subheader("Metoda Łokcia (Elbow Method)")
+        fig_elbow = go.Figure()
+        fig_elbow.add_trace(go.Scatter(x=list(k_range), y=inertia_values, mode='lines+markers'))
+        fig_elbow.update_layout(
+            title="Suma Kwadratów Odległości wewnątrz Klastrów (Inertia)",
+            xaxis_title="Liczba Klastrów (K)",
+            yaxis_title="Inertia (WCSS)"
+        )
+        st.plotly_chart(fig_elbow, use_container_width=True)
+        st.markdown("**Jak interpretować:** Szukaj 'załamania' (łokcia) na wykresie. Jest to punkt, w którym dodanie kolejnego klastra nie przynosi już znaczącej redukcji sumy błędów. To sugeruje optymalne K.")
+
+    with tab2:
+        st.subheader("Analiza Sylwetkowa (Silhouette Analysis)")
+        fig_silhouette = go.Figure()
+        fig_silhouette.add_trace(go.Scatter(x=list(k_range), y=silhouette_values, mode='lines+markers'))
+        fig_silhouette.update_layout(
+            title="Średni Współczynnik Sylwetkowy",
+            xaxis_title="Liczba Klastrów (K)",
+            yaxis_title="Silhouette Score"
+        )
+        st.plotly_chart(fig_silhouette, use_container_width=True)
+        st.markdown("**Jak interpretować:** Wynik bliski +1 oznacza, że klastry są gęste i dobrze odseparowane. Wynik bliski 0 oznacza nakładanie się klastrów. **Szukaj wartości 'K', która daje najwyższy (maksymalny) wynik.**")
+```
+
+### 6\. Krok 4: Uruchomienie Modelu i Wizualizacja
+
+```python
+    # === SEKCJA 4: WYNIKI KLASTROWANIA ===
+    st.header("Uruchomienie Modelu K-Means")
+
+    # Wybór ostatecznego K przez użytkownika
+    st.sidebar.header("3. Uruchom Model")
+    final_k = st.sidebar.number_input(
+        "Wybierz ostateczną liczbę klastrów (K):",
+        min_value=2, 
+        max_value=max_k, 
+        value=silhouette_values.index(max(silhouette_values)) + 2, # Sugeruj K z najlepszym Silhouette
+        help="Wybierz K na podstawie analizy z Metody Łokcia i Analizy Sylwetkowej."
     )
+
+    # Uruchomienie finalnego modelu
+    final_kmeans = KMeans(n_clusters=final_k, init='k-means++', n_init=10, random_state=42)
+    final_kmeans.fit(X_scaled)
+    cluster_labels = final_kmeans.labels_
+
+    # Dodanie wyników do oryginalnego DataFrame
+    df_results = X_raw.copy()
+    df_results['cluster'] = cluster_labels
+    
+    st.subheader(f"Wizualizacja Klastrów (K={final_k})")
+
+    # Wizualizacja 2D/3D
+    if len(selected_features) == 2:
+        fig_clusters = px.scatter(
+            df_results, 
+            x=selected_features[0], 
+            y=selected_features[1], 
+            color='cluster',
+            color_continuous_scale=px.colors.qualitative.Vivid,
+            title="Wyniki Klastrowania (Dane Oryginalne)"
+        )
+        st.plotly_chart(fig_clusters, use_container_width=True)
+    elif len(selected_features) == 3:
+        st.info("Tworzysz klastry w 3D. Możesz obracać poniższy wykres.")
+        fig_clusters = px.scatter_3d(
+            df_results, 
+            x=selected_features[0], 
+            y=selected_features[1], 
+            z=selected_features[2], 
+            color='cluster',
+            color_continuous_scale=px.colors.qualitative.Vivid,
+            title="Wyniki Klastrowania (Dane Oryginalne)"
+        )
+        st.plotly_chart(fig_clusters, use_container_width=True)
+    else:
+        st.warning(f"Klastrowanie przeprowadzono na {len(selected_features)} cechach. Wizualizacja jest możliwa tylko dla 2 lub 3 cech. Pokazuję pierwsze dwie:")
+        fig_clusters = px.scatter(
+            df_results, 
+            x=selected_features[0], 
+            y=selected_features[1], 
+            color='cluster',
+            color_continuous_scale=px.colors.qualitative.Vivid,
+            title=f"Wizualizacja 2D (użyto {len(selected_features)} cech)"
+        )
+        st.plotly_chart(fig_clusters, use_container_width=True)
+
+    # === SEKCJA 5: INTERPRETACJA ===
+    st.header("Charakterystyka Odkrytych Klastrów")
+    st.markdown("Poniższa tabela pokazuje **średnie wartości** każdej cechy dla każdego klastra. Pomaga to zrozumieć i 'nazwać' (stworzyć persony) dla każdej z grup.")
+    
+    cluster_summary = df_results.groupby('cluster')[selected_features].mean()
+    st.dataframe(cluster_summary.style.format("{:.2f}"))
+
+    st.subheader("Podgląd Danych z Przypisanymi Klastrami")
+    st.dataframe(df_results.head())
 ```
 
 -----
@@ -247,10 +277,10 @@ Agencie, poniższy tekst w formacie Markdown powinien zostać dodany jako nowa s
 
 **Instrukcja dla agenta:**
 
-1.  Zlokalizuj plik(i) Pythona odpowiedzialne za moduł "Baza Wiedzy" (np. `knowledge_base.py` lub główny plik `app.py`, gdzie zdefiniowana jest nawigacja).
-2.  Utwórz nową funkcję, np. `def show_regression_docs():`.
-3.  Wklej poniższą treść (całą sekcję "Treść dla modułu Baza Wiedzy") do tej funkcji, używając `st.markdown()`. Upewnij się, że renderowanie LaTeX (dla wzorów) jest włączone (Streamlit domyślnie to obsługuje).
-4.  Dodaj w menu nawigacyjnym "Bazy Wiedzy" odnośnik (np. w `st.selectbox` lub `st.sidebar`) prowadzący do funkcji `show_regression_docs()`.
+1.  Zlokalizuj plik(i) Pythona odpowiedzialne za moduł "Baza Wiedzy".
+2.  Utwórz nową funkcję, np. `def show_kmeans_docs():`.
+3.  Wklej poniższą treść do tej funkcji, używając `st.markdown()`.
+4.  Dodaj w menu nawigacyjnym "Bazy Wiedzy" odnośnik prowadzący do funkcji `show_kmeans_docs()`.
 
 -----
 
@@ -258,100 +288,75 @@ Agencie, poniższy tekst w formacie Markdown powinien zostać dodany jako nowa s
 
 (Początek treści do skopiowania)
 
-## 📈 Analiza Regresji: Liniowa i Logarytmiczna
+## 💠 Klastrowanie K-Means (Grupowanie Metodą K-Średnich)
 
-Analiza regresji to jedna z fundamentalnych technik statystycznych. Jej celem jest **modelowanie zależności** między zmiennymi. Najczęściej chcemy zrozumieć, jak jedna zmienna (zależna, $Y$) zmienia się, gdy zmienia się inna zmienna (niezależna, $X$).
+K-Means to jeden z najpopularniejszych algorytmów **uczenia nienadzorowanego**. Jego celem jest automatyczne podzielenie zbioru danych na $K$ odrębnych grup (klastrów), gdzie punkty wewnątrz jednego klastra są do siebie jak najbardziej podobne, a punkty między różnymi klastrami – jak najmniej.
 
-### Czym jest Regresja Liniowa?
+### Jak Działa Algorytm K-Means?
 
-Regresja liniowa jest najprostszym typem regresji. Zakłada ona, że zależność między zmienną $X$ a $Y$ można opisać za pomocą **linii prostej**.
+Algorytm działa iteracyjnie, próbując znaleźć "środki" (centroidy) dla $K$ grup.
 
-#### Wzór
-
-Model opisany jest prostym równaniem:
-
-$$
-y = ax + b
-$$Gdzie:
-
-* **$y$** – Wartość prognozowana (zmienna zależna).
-* **$x$** – Wartość zmiennej niezależnej.
-* **$a$** – **Współczynnik nachylenia** (slope). Mówi nam, o ile *średnio* zmieni się $y$, jeśli $x$ wzrośnie o jedną jednostkę.
-* **$b$** – **Wyraz wolny** (intercept). Jest to punkt przecięcia linii z osią $Y$, czyli wartość $y$, gdy $x$ wynosi 0.
-
-#### Jak się ją liczy?
-
-Najpopularniejszą metodą jest **Metoda Najmniejszych Kwadratów (Ordinary Least Squares - OLS)**. Komputer szuka takiej linii (czyli takich wartości $a$ i $b$), która minimalizuje sumę kwadratów odległości (tzw. "błędów" lub "rezyduów") między rzeczywistymi punktami danych a linią regresji.
-
-#### Kiedy jej używać?
-
-* Gdy na wykresie punktowym dane wydają się układać wzdłuż linii prostej.
-* Gdy zakładamy stałe tempo zmiany (np. koszt wyprodukowania 10 sztuk jest 10 razy większy niż 1 sztuki).
-* Jako model bazowy do porównania z bardziej skomplikowanymi modelami.
+1.  **Krok 1: Wybór $K$**
+    Użytkownik musi na początku **zdecydować**, na ile grup ($K$) chce podzielić dane. (Patrz poniżej, jak wybrać $K$).
+2.  **Krok 2: Inicjalizacja**
+    Algorytm losowo (lub "inteligentnie" dzięki metodzie `k-means++`) umieszcza $K$ centroidów (punktów centralnych) w przestrzeni danych.
+3.  **Krok 3: Przypisanie**
+    Każdy punkt danych jest przypisywany do **najbliższego** mu centroidu (zazwyczaj na podstawie odległości euklidesowej).
+4.  **Krok 4: Aktualizacja**
+    Po przypisaniu wszystkich punktów, centroidy są **przesuwane**. Nową lokalizacją każdego centroidu jest **średnia arytmetyczna** wszystkich punktów, które zostały do niego przypisane.
+5.  **Krok 5: Powtórzenie**
+    Kroki 3 i 4 są powtarzane aż do **konwergencji** – czyli do momentu, gdy centroidy przestaną się znacząco przemieszczać (klastry się ustabilizują).
 
 -----
 
-### Czym jest Regresja Logarytmiczna?
+### Metody Statystyczne: "Jak wybrać K?"
 
-Regresja logarytmiczna jest modelem krzywoliniowym. Jest idealna do opisywania sytuacji, w których zależność **szybko rośnie na początku, a następnie zwalnia** (lub nasyca się).
+To największe wyzwanie w K-Means. Nie ma jednej "poprawnej" odpowiedzi, ale używamy metod statystycznych, aby oszacować dobrą wartość $K$.
 
-#### Wzór
+#### 1\. Metoda Łokcia (Elbow Method)
 
-Model opisany jest równaniem:
+  * **Co mierzy:** **Inercję (WCSS)**, czyli sumę kwadratów odległości każdego punktu od jego centroidu. Mówiąc prościej: jak bardzo "ścisłe" są klastry.
+  * **Jak to działa:** Uruchamiamy K-Means dla różnych wartości $K$ (np. od 2 do 10) i liczymy inercję dla każdej z nich.
+  * **Interpretacja:**
+      * Im więcej klastrów ($K$), tym mniejsza będzie inercja (bo klastry są mniejsze i ciaśniejsze).
+      * Rysujemy wykres $K$ vs. Inercja.
+      * Szukamy punktu **"załamania" (łokcia)** – miejsca, w którym linia przestaje gwałtownie opadać. Jest to punkt, w którym dodanie kolejnego klastra nie przynosi już dużej korzyści (nie zmniejsza znacząco inercji).
 
-$$y = a \\cdot \\ln(x) + b
-$$Gdzie:
+#### 2\. Analiza Sylwetkowa (Silhouette Analysis)
 
-  * **$y$**, **$a$**, **$b$** – Mają podobne znaczenie jak w regresji liniowej.
-  * **$\ln(x)$** – **Logarytm naturalny** ze zmiennej $x$.
-
-**Ważna uwaga:** Model ten można stosować tylko wtedy, gdy wartości zmiennej niezależnej $X$ są **dodatnie** ($x > 0$), ponieważ logarytm z zera lub liczb ujemnych jest niezdefiniowany.
-
-#### Jak się ją liczy?
-
-Najczęściej sprowadza się to do prostego triku:
-
-1.  Tworzymy nową zmienną, $X' = \ln(X)$.
-2.  Wykonujemy **regresję liniową** na danych $(X', Y)$.
-    Model, który otrzymujemy, to $y = a \cdot X' + b$, co po podstawieniu $X'$ daje nam $y = a \cdot \ln(x) + b$.
-
-#### Kiedy jej używać?
-
-  * Gdy obserwujemy **prawo malejących przychodów**. Na przykład:
-      * Wpływ wydatków na reklamę na sprzedaż (pierwsza wydana złotówka przynosi duży zwrot, ale milionowa już znacznie mniejszy).
-      * Wpływ liczby godzin nauki na wynik egzaminu (przejście z 0 na 2 godziny daje duży skok; przejście z 10 na 12 godzin – niewielki).
-  * Gdy tempo wzrostu $Y$ maleje wraz ze wzrostem $X$.
+  * **Co mierzy:** **Współczynnik Sylwetkowy (Silhouette Score)**. Jest to miara bardziej zaawansowana, która ocenia dwie rzeczy jednocześnie:
+    1.  **Spójność (Cohesion):** Jak blisko punkty są do innych punktów w tym samym klastrze?
+    2.  **Separację (Separation):** Jak daleko punkty są od punktów w *innych* klastrach?
+  * **Jak to działa:** Wynik jest obliczany dla każdego punktu i mieści się w zakresie od -1 do 1.
+      * **+1:** Idealnie. Punkt jest daleko od sąsiednich klastrów i blisko swoich.
+      * **0:** Punkt jest na granicy dwóch klastrów (nakładanie się).
+      * **-1:** Źle. Punkt jest prawdopodobnie przypisany do złego klastra.
+  * **Interpretacja:**
+      * Uruchamiamy K-Means dla różnych $K$ i liczymy *średni* Współczynnik Sylwetkowy dla wszystkich punktów.
+      * Rysujemy wykres $K$ vs. Średni Silhouette Score.
+      * W przeciwieństwie do Metody Łokcia, tutaj **szukamy maksimum (szczytu)**. Najwyższy wynik wskazuje na $K$, które daje najbardziej spójne i najlepiej odseparowane klastry.
 
 -----
 
-### Jak ocenić, który model jest lepszy?
+### Inne "Metody" i Wymagania K-Means
 
-Po dopasowaniu obu modeli do tych samych danych, musimy zdecydować, który z nich jest lepszy. Używamy do tego dwóch kluczowych metryk:
+Aby K-Means zadziałało poprawnie, nie wystarczy tylko wybrać $K$. Kluczowe są też poniższe "metody" (techniki).
 
-#### 1\. R-kwadrat (R²) – Współczynnik Determinacji
+#### 1\. Metoda: Standaryzacja Danych
 
-  * **Co mierzy:** Jak dobrze model (linia lub krzywa) **wyjaśnia zmienność** w danych.
-  * **Interpretacja:** Jest to wartość od 0 do 1 (lub 0% do 100%).
-      * R² = 0.85 oznacza, że 85% zmienności w $Y$ jest wyjaśniane przez zmienną $X$ za pomocą naszego modelu.
-  * **Wybór:** **Im wyższy R², tym (zazwyczaj) lepszy model.** Lepsze dopasowanie do danych.
+  * **Problem:** Algorytm K-Means opiera się na **odległości**. Jeśli masz cechy o różnych skalach (np. `Wiek` [0-100] i `Zarobki` [3 000 - 50 000]), cecha o większej skali (`Zarobki`) całkowicie zdominuje obliczenia odległości. Algorytm praktycznie zignoruje `Wiek`.
+  * **Rozwiązanie (Metoda):** **Standaryzacja** (np. `StandardScaler` w Scikit-learn).
+  * **Co robi:** Przekształca wszystkie cechy tak, aby miały średnią równą 0 i odchylenie standardowe równe 1. To sprawia, że każda cecha ma "równą wagę" w algorytmie.
+  * **Wniosek:** **Prawie zawsze powinieneś standaryzować dane przed użyciem K-Means.**
 
-#### 2\. Błąd Średniokwadratowy (Mean Squared Error - MSE)
+#### 2\. Metoda: Inicjalizacja (Problem Lokalne Minimum)
 
-  * **Co mierzy:** Średnią kwadratów błędów (różnic między wartością rzeczywistą $y$ a prognozowaną $\hat{y}$).
-  * **Interpretacja:** Jest to miara błędu prognozy. Ponieważ błędy są podnoszone do kwadratu, metryka ta bardzo **mocno "karze" duże błędy**.
-  * **Wybór:** **Im niższy MSE, tym lepszy model.** Oznacza to, że prognozy modelu są średnio bliższe prawdy.
-
-#### Wnioskowanie:
-
-Najczęściej szukamy modelu, który ma **jednocześnie wysoki R² i niski MSE**.
-
-### Problem Overfittingu (Przeuczenia)
-
-Overfitting to jeden z największych problemów w modelowaniu.
-
-  * **Definicja:** Zjawisko, w którym model jest **zbyt skomplikowany** i zamiast uczyć się ogólnego trendu w danych, zaczyna "wkuwać na pamięć" dane treningowe, łącznie z przypadkowym szumem.
-  * **Skutek:** Taki model ma fantastyczne metryki (np. R² bliskie 1.0) na danych, na których był uczony, ale kompletnie nie potrafi przewidywać nowych, nieznanych mu danych.
-  * **Jak się chronić:** W przypadku prostych modeli (jak regresja liniowa czy logarytmiczna z jedną zmienną) ryzyko jest bardzo małe. Problem pojawia się przy modelach bardzo złożonych (np. wielomiany wysokiego stopnia, głębokie sieci neuronowe).
-  * **Podstawowa zasada:** Zawsze należy dążyć do modelu **możliwie najprostszego**, który wciąż dobrze wyjaśnia dane (tzw. "Zasada Oszczędności" lub "Brzytwa Ockhama").
+  * **Problem:** Wynik K-Means może zależeć od tego, gdzie **na początku** zostały umieszczone centroidy (Krok 2). Zły początkowy wybór może uwięzić algorytm w "lokalnym minimum" – znajdzie on klastry, ale nie będą one optymalne.
+  * **Rozwiązanie (Metoda 1): `n_init`**
+      * Uruchamiamy algorytm K-Means **wiele razy** (np. `n_init=10`) z różnymi losowymi punktami startowymi.
+      * Jako ostateczny wynik wybierany jest ten przebieg, który dał najniższą inercję (WCSS).
+  * **Rozwiązanie (Metoda 2): `init='k-means++'`**
+      * To domyślna metoda inicjalizacji w Scikit-learn.
+      * Zamiast umieszczać centroidy w pełni losowo, `k-means++` robi to "inteligentnie" – stara się umieścić początkowe centroidy daleko od siebie. Znacząco zwiększa to szansę na znalezienie optymalnych klastrów i przyspiesza konwergencję.
 
 (Koniec treści do skopiowania)
